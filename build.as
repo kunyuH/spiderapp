@@ -11,6 +11,7 @@
       "pandas",
       "openpyxl",
       "schedule",
+      "frida",
       "pycryptodome"
     ],
     "options": [
