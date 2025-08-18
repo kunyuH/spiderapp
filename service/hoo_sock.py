@@ -3,6 +3,7 @@ import threading
 
 from websocket import WebSocketApp
 import traceback
+from ascript.android.ui import Dialog
 
 from ..utils.tools import is_json
 from .global_context import GCT
@@ -44,6 +45,7 @@ class HooSock:
                 print("####### on_error #######")
                 print("error：%s" % error)
                 traceback.print_exc()
+                Dialog.toast("连接异常", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
 
             def on_close(ws,close_status_code, close_msg):
                 print("####### on_close #######")
@@ -52,6 +54,7 @@ class HooSock:
 
             def on_open(ws):
                 print("####### on_open #######")
+                Dialog.toast("已连接", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
 
             def server_thread():
                 # url = "ws://192.168.0.101:10102"
