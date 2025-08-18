@@ -310,7 +310,7 @@ def on_message_content(ws , id, option):
             if g_num >= 3:
                 break
 
-            if len(gather_comment) >= old:
+            if len(gather_comment) > old:
                 g_num = 0
             else:
                 g_num += 1
