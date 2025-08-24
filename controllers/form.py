@@ -1,6 +1,7 @@
 from ascript.android.system import R
 from ascript.android.ui import WebWindow
 import json
+from ascript.android.system import Device
 
 from ..service.hoo_sock import HooSock
 from ..utils.tools import off
@@ -21,8 +22,6 @@ def tunnel(k,v):
         print(resobj)
 
         def on_message(ws, type, id, option):
-            print(1111111)
-            print(type)
             if type == 'xhs_gather_comment':
                 on_message_content(ws, id, option)
             elif type == 'end':

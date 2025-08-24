@@ -29,9 +29,9 @@ class HooSock:
                 if message == '__ping__':
                     ws.send('__pong__')
                     return
-
-                print("####### on_message #######")
-                print("message：%s" % message)
+                #
+                # print("####### on_message #######")
+                # print("message：%s" % message)
                 if is_json(message):
                     msg = json.loads(message)
                     # 把耗时逻辑放到子线程执行
