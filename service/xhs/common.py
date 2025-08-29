@@ -243,8 +243,11 @@ def on_message_content(ws , id, option):
                                 like = item.find(Selector().child().type('LinearLayout').child().type("TextView")).text
                             except:
                                 like = 0
+                            print(content)
                             # 提取时间 ip
                             create_time,ip_location,content = ip_date(content)
+                            print(create_time,ip_location,content)
+                            print('------------------')
                             # ture 如果时间 ip 都没有
                             if create_time is None and ip_location is None:
                                 date_ip = item.find(Selector().child().type('RelativeLayout').child().type("TextView")).text
@@ -310,6 +313,7 @@ def on_message_content(ws , id, option):
                                 # exit()
                                 user_url = Clipboard.get()
                                 content_data['user_info']['user_id'] = user_url.split('?')[0].split('/')[-1]
+                                content_data['user_info']['url'] = user_url
 
                                 # 留存数据
                                 # send(ws, 'content_data', content_data)
@@ -321,8 +325,7 @@ def on_message_content(ws , id, option):
                                 print('44444444444444')
                         except Exception as e:
                             print('异常++++++++++++++++++++++++++')
-                            # err_msg = traceback.format_exc()   # 获取完整堆栈字符串
-                            # out_error(ws, f"笔记 【{note_id}】 评论采集异常 {err_msg}")
+                            print(traceback.format_exc())
 
                 if is_jump:
                     break

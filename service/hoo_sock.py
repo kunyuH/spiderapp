@@ -25,21 +25,27 @@ class HooSock:
         if GCT().get('Websocket') is None:
 
             def on_message(ws, message):
-
+                print("=====：%s" % message)
                 if message == '__ping__':
                     ws.send('__pong__')
-                    return
-                #
-                # print("####### on_message #######")
-                # print("message：%s" % message)
-                if is_json(message):
-                    msg = json.loads(message)
-                    # 把耗时逻辑放到子线程执行
-                    threading.Thread(
-                        target=self.func,
-                        args=(ws, msg.get('type'), msg.get('id'), msg.get('option')),
-                        daemon=True
-                    ).start()
+                    print('__pong__')
+                else:
+                    try:
+                        # print("####### on_message #######")
+                        # print("message：%s" % message)
+                        if is_json(message):
+                            msg = json.loads(message)
+                            # 把耗时逻辑放到子线程执行
+                            threading.Thread(
+                                target=self.func,
+                                args=(ws, msg.get('type'), msg.get('id'), msg.get('option')),
+                                daemon=True
+                            ).start()
+
+                    except Exception as e:
+                        print(e)
+                        traceback.print_exc()
+                pass
 
             def on_error(ws, error):
                 print("####### on_error #######")
@@ -54,7 +60,7 @@ class HooSock:
 
             def on_open(ws):
                 print("####### on_open #######")
-                Dialog.toast("已连接", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
+                # Dialog.toast("已连接", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
 
             def server_thread():
                 # url = "ws://192.168.0.101:10102"

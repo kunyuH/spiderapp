@@ -26,6 +26,10 @@ class GCT:
         with self._lock:
             return self._data.get(key, default)
 
+    def keys(self):
+        with self._lock:
+            return self._data.keys()
+
     def remove(self, key):
         with self._lock:
             if key in self._data:
