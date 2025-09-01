@@ -37,10 +37,10 @@ def send(ws, type, data):
     }))
 
 
-def run_sel(fun, re_time=10):
+def run_sel(fun, re_time=10, sleep=0.8):
     num = 0
     while True:
-        time.sleep(1)
+        time.sleep(sleep)
         if num >= re_time:
             return None
         try:
@@ -48,7 +48,7 @@ def run_sel(fun, re_time=10):
             if a:
                 return a
         except Exception as e:
-            return None
+            pass
         num += 1
         time.sleep(0.5)
 
@@ -306,12 +306,34 @@ def on_message_content(ws , id, option):
                             })
 
                             if content_data is not None:
+
                                 # 获取uid （点击用户名称 进入主页 把链接复制出来 截取里面的uid）
                                 item.find(Selector(2).child().type('TextView').drawingOrder(2).click())
+
+                                # 获取用户主页信息
+                                # 用户小红书号
+                                red_id = run_sel(lambda: Selector().text("小红书号.*").find(),3,0).text.replace('小红书号：', '').strip()
+                                # 用户性别
+                                gen = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/LinearLayout/LinearLayout/LinearLayout").find(),3,0)
+                                gender = gen.desc if gen is not None else ''
+
+                                ffi = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/Button/TextView").find_all(),3,0)
+                                # 用户关注
+                                follows = ffi[0].text if ffi is not None and len(ffi) > 0 else ''
+                                # 用户粉丝
+                                fans = ffi[2].text if ffi is not None and len(ffi) > 2 else ''
+                                # 用户获赞与收藏
+                                interaction = ffi[4].text if ffi is not None and len(ffi) > 4 else ''
+
                                 run_sel(lambda :Selector(2).type("ImageView").desc("更多").click().find())
                                 run_sel(lambda :Selector(2).desc("复制链接").type("Button").child().type("ViewGroup").click().find())
                                 # exit()
                                 user_url = Clipboard.get()
+                                content_data['user_info']['red_id'] = red_id
+                                content_data['user_info']['gender'] = gender
+                                content_data['user_info']['follows'] = follows
+                                content_data['user_info']['fans'] = fans
+                                content_data['user_info']['interaction'] = interaction
                                 content_data['user_info']['user_id'] = user_url.split('?')[0].split('/')[-1]
                                 content_data['user_info']['url'] = user_url
 
