@@ -15,9 +15,9 @@ class HooSock:
     func = None
     web_sock_key = 'Websocket'
 
-    def __init__(self, url, uuid=None):
+    def __init__(self, url, app_uuid=None):
         self.url = url
-        self.uuid = uuid
+        self.app_uuid = app_uuid
 
     def set_on_message(self, func):
         self.func = func
@@ -66,7 +66,7 @@ class HooSock:
                 print("####### on_open #######")
                 Dialog.toast("已连接", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
                 send(ws=ws,type='change_uuid',option={
-                    "uuid": self.uuid
+                    "app_uuid": self.app_uuid
                 })
 
             def server_thread():

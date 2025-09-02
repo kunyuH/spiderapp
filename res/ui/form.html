@@ -35,7 +35,7 @@
                 <div class="layui-inline">
                     <label class="layui-form-label">名称</label>
                     <div class="layui-input-inline">
-                        <input id="appui_uuid" type="text" name="uuid" placeholder="请输入当前采集器名称" autocomplete="off"
+                        <input id="appui_app_uuid" type="text" name="app_uuid" placeholder="请输入当前采集器名称" autocomplete="off"
                             class="layui-input">
                     </div>
                 </div>
@@ -57,7 +57,14 @@
     <script src="js/jquery.min.js"></script>
 
     <script>
-
+        function randomString(length = 6) {
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+          let result = '';
+          for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          return result;
+        }
         $(function () {
             $("#asui_close").click(function (e) {
                 //发送关闭指令
@@ -74,11 +81,15 @@
             var form = layui.form;
             var layer = layui.layer;
 
-            // var cache_data = airscript.get("asdata")
             var cache_data = airscript.get("asdata");
             if (cache_data && cache_data.length > 0) {
                 try {
                     var data = JSON.parse(cache_data); // 将缓存数据解析为对象
+                    // app_uuid 不存在或者为空 则生成6位随机名称
+                    if (data.app_uuid === undefined || data.app_uuid === '') {
+                       data.app_uuid = randomString();
+                    }
+                    airscript.call("set_app_uuid",data.app_uuid);
                     form.val('formFilter', data); // 回填数据到表单
                     form.render(); // 重新渲染表单（确保下拉框等动态元素正确显示）
                 } catch (e) {
