@@ -1,37 +1,6 @@
-import json
 import re
-import uuid
 from datetime import datetime, timedelta
-
-from ..service.global_context import GCT
-
-
-def timestamp_to_date(timestamp, fmt='%Y-%m-%d %H:%M:%S'):
-    # 如果是10位
-    if len(str(timestamp)) == 13:
-        timestamp = timestamp / 1000
-    # 将10位时间戳转换为datetime对象
-    dt = datetime.fromtimestamp(timestamp)
-    # 格式化日期
-    date = dt.strftime(fmt)
-    return date
-
-def date_to_timestamp(time_str):
-    dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
-    return int(dt.timestamp())*1000
-
-def generate_guid():
-    return str(uuid.uuid4())
-
-def is_json(s):
-    if not isinstance(s, str):
-        return False
-    try:
-        obj = json.loads(s)
-        return isinstance(obj, (dict, list))  # 确保是对象或数组
-    except json.JSONDecodeError:
-        return False
-
+from venv import create
 def parse_chinese_time(text):
     now = datetime.now()
 
@@ -69,14 +38,11 @@ def parse_chinese_time(text):
 
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-is_end_key = 'sys_is_end_key'
-def off():
-    GCT().remove(is_end_key)
 
-def on():
-    GCT().set(is_end_key, True)
+def date_to_timestamp(time_str):
+    dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+    return int(dt.timestamp())*1000
 
-def check_end():
-    if GCT().get(is_end_key) is None:
-        return False
-    return GCT().get(is_end_key)
+create_time = '18:09'
+a = parse_chinese_time(create_time)
+pass

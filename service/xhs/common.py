@@ -96,25 +96,31 @@ def ip_date(content):
     # 我的美食，还 有 昨日 12:50
     # 我的美食，还 有 12:50 北京
     # 我的美食，还 有 12:50
+    # 好心疼这些土地啊， 11小时前 江苏
 
     # 时间模式
     time_pattern = (
-        r"(?:"
+         r"(?:"
         r"(?:刚刚|刚才|今天|昨天|昨日|前天)(?:\s+\d{1,2}:\d{2})?"  # 相对时间 + 可选 HH:MM
-        r"|\d+分钟前|\d+小时前|\d+天前"  # 数字时间
-        r"|\d{1,2}:\d{2}"  # HH:MM
-        r"|\d{2}-\d{2}"  # MM-DD
-        r"|\d{4}-\d{2}-\d{2}"  # YYYY-MM-DD
+        r"|\d+分钟前|\d+小时前|\d+天前"                               # 数字时间
+        r"|\d{1,2}:\d{2}"                                           # HH:MM
+        r"|\d{2}-\d{2}"                                             # MM-DD
+        r"|\d{4}-\d{2}-\d{2}"                                       # YYYY-MM-DD
         r")"
     )
 
     # 完整正则：评论 + 空格 + 时间 + 可选空格 + 可选IP(中文) + 结尾
-    pattern = re.compile(rf"(.*?)\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?$")
+    # pattern = re.compile(rf"(.*?)\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?$")
+    # pattern = re.compile(rf"^(.*?)(?:\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
+    pattern = re.compile(rf"^(.*?)(?:\s*({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
+
+    # pattern = re.compile(rf"^(.*?)(?:\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
 
     match = pattern.match(content)
+    # 如果只分出来两个 则
     if match:
-        comment = match.group(1).strip()
-        time_text = match.group(2).strip()
+        comment = match.group(1).strip() or None
+        time_text = match.group(2).strip() if match.group(2) else None
         ip_text = match.group(3).strip() if match.group(3) else None
     else:
         # 如果末尾没有时间，则全部视为评论
@@ -122,10 +128,10 @@ def ip_date(content):
         time_text = None
         ip_text = None
 
-    print(f"原始: {content}")
-    print(f"时间: {time_text}, IP属地: {ip_text}")
-    print(f"内容: {comment}")
-    print("-" * 30)
+    # print(f"原始: {content}")
+    # print(f"时间: {time_text}, IP属地: {ip_text}")
+    # print(f"内容: {comment}")
+    # print("-" * 30)
     return time_text, ip_text, comment
 
 def content_filter(content_data,fiter_data):
@@ -205,8 +211,8 @@ def on_message_content(ws , id, option):
             run_sel(lambda :content_button.find(Selector(2).click()))
 
             # 点击按最新
-            run_sel(lambda :Selector(2).text(".*条评论").type("TextView").click().find())
-            run_sel(lambda: Selector(2).text("按最新").type("TextView").parent(1).click().find())
+            run_sel(lambda :Selector(2).text(".*条评论").type("TextView").click().find(),3)
+            run_sel(lambda: Selector(2).text("按最新").type("TextView").parent(1).click().find(),2)
             time.sleep(0.5)
 
             is_jump = False
@@ -232,12 +238,19 @@ def on_message_content(ws , id, option):
                             is_jump = True
                             break
                         try:
-                            usre_name_obj = item.find(Selector().child().type('TextView').drawingOrder(2))
+                            usre_name_obj = run_sel(lambda :item.find(Selector().child().type('TextView').drawingOrder(2)),3,0.1)
                             if not usre_name_obj:
                                 continue
                             usre_name = usre_name_obj.text
 
                             content = item.find(Selector().child().type('TextView').drawingOrder(4)).text
+
+                            # 作者
+                            try:
+                                item.find(Selector().child().text('作者'))
+                                is_author = True
+                            except:
+                                is_author = False
 
                             try:
                                 like = item.find(Selector().child().type('LinearLayout').child().type("TextView")).text
@@ -246,6 +259,9 @@ def on_message_content(ws , id, option):
                             print(content)
                             # 提取时间 ip
                             create_time,ip_location,content = ip_date(content)
+                            if create_time is None:
+                                date_ip = item.find(Selector().child().type('RelativeLayout').child().type("TextView")).text
+                                create_time, ip_location, _ = ip_date(date_ip)
                             print(create_time,ip_location,content)
                             print('------------------')
                             # ture 如果时间 ip 都没有
@@ -280,7 +296,7 @@ def on_message_content(ws , id, option):
                                 continue
 
                             out_success(ws,
-                                        f"{num}. 【{timestamp_to_date(create_time)}】 【{usre_name}】 评论：{content} 点赞：{like} IP属地：{ip_location}")
+                                        f"{num}. 【{timestamp_to_date(create_time)}】 【{usre_name}】 评论：{content} 作者：{'是' if is_author else '否'} 点赞：{like} IP属地：{ip_location}")
 
                             content_data = {
                                 # 'usre_name':usre_name,
@@ -292,9 +308,8 @@ def on_message_content(ws , id, option):
                                 'user_info':{
                                     'nickname':usre_name
                                 },
-                                'show_tags':[]
+                                'show_tags':['is_author'] if is_author else [],
                             }
-
 
                             content_data = content_filter(content_data,{
                                 # 'follow_time': follow_time,                               # 评论时间 限制
@@ -344,7 +359,9 @@ def on_message_content(ws , id, option):
 
                                 # 返回
                                 run_sel(lambda :Selector(2).type("ImageView").desc("返回").click().find())
-                                print('44444444444444')
+                                # action.Key.back()
+                                # exit()
+                                # print('44444444444444')
                         except Exception as e:
                             print('异常++++++++++++++++++++++++++')
                             print(traceback.format_exc())

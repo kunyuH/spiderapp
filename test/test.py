@@ -29,12 +29,17 @@ def ip_date(content):
     )
 
     # 完整正则：评论 + 空格 + 时间 + 可选空格 + 可选IP(中文) + 结尾
-    pattern = re.compile(rf"(.*?)\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?$")
+    # pattern = re.compile(rf"(.*?)\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?$")
+    # pattern = re.compile(rf"^(.*?)(?:\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
+    pattern = re.compile(rf"^(.*?)(?:\s*({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
+
+    # pattern = re.compile(rf"^(.*?)(?:\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
 
     match = pattern.match(content)
+    # 如果只分出来两个 则
     if match:
-        comment = match.group(1).strip()
-        time_text = match.group(2).strip()
+        comment = match.group(1).strip() or None
+        time_text = match.group(2).strip() if match.group(2) else None
         ip_text = match.group(3).strip() if match.group(3) else None
     else:
         # 如果末尾没有时间，则全部视为评论
@@ -72,16 +77,10 @@ def parse_chinese_time(text):
                 dt = now - timedelta(days=1)
         else:
             dt = now - timedelta(days=1)
-    elif text.startswith("昨日"):
-        time_part = text.replace("昨日", "").strip()
-        if time_part:
-            try:
-                time_obj = datetime.strptime(time_part, "%H:%M")
-                dt = datetime(now.year, now.month, now.day, time_obj.hour, time_obj.minute) - timedelta(days=1)
-            except:
-                dt = now - timedelta(days=1)
-        else:
-            dt = now - timedelta(days=1)
+    elif re.match(r"^\d{2}:\d{2}$", text):  # HH:MM 格式，当天时间
+        time_obj = datetime.strptime(text, "%H:%M")
+        dt = datetime(now.year, now.month, now.day,
+                      time_obj.hour, time_obj.minute)
     elif re.match(r"\d{2}-\d{2}$", text):  # MM-DD
         dt = datetime.strptime(f"{now.year}-{text}", "%Y-%m-%d")
     elif re.match(r"\d{4}-\d{2}-\d{2}", text):  # YYYY-MM-DD
@@ -92,22 +91,23 @@ def parse_chinese_time(text):
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 cc = [
-    "我的美食，还 有 昨日 12:50 北京",
-    "我的美食，还 有 昨日 12:50",
-    "我的美食，还 有 昨日 23:50 北京",
-    "我的美食，还 有 昨日 22:50",
-    "我的美食，还 有 12:50 北京",
-    "我的美食，还 有 12:50",
-    "好心疼这些土地啊， 11小时前 江苏",
-    "好心疼这些土地啊， 11小时前",
-    "好心疼这些土地啊， 1分钟前 江苏",
-    "好心疼这些土地啊， 1分钟前",
-    "好心疼这些土地啊， 刚刚 江苏",
-    "好心疼这些土地啊， 刚刚",
-    "好心疼这些土地啊， 05-24",
+    # "我的美食，还 有 昨日 12:50 北京",
+    # "我的美食，还 有 昨日 12:50",
+    # "我的美食，还 有 昨日 23:50 北京",
+    # "我的美食，还 有 昨日 22:50",
+    # "我的美食，还 有 12:50 北京",
+    # "我的美食，还 有 12:50",
+    # "好心疼这些土地啊， 11小时前 江苏",
+    # "好心疼这些土地啊， 11小时前",
+    # "好心疼这些土地啊， 1分钟前 江苏",
+    # "好心疼这些土地啊， 1分钟前",
+    # "好心疼这些土地啊， 刚刚 江苏",
+    # "好心疼这些土地啊， 刚刚",
+    # "好心疼这些土地啊， 05-24",
     "好心疼这些土地啊， 05-24 江苏",
     "好心疼这些土地啊， 2025-05-24 江苏",
     "好心疼这些土地啊， 2023-05-24",
+    "28分钟前 浙江",
 ]
 
 for c in cc:
