@@ -11,77 +11,9 @@ from ascript.android.system import Clipboard
 from ascript.android import action
 from ascript.android.system import Device
 
-from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on
+from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, \
+    out_info, out_success, send, run_sel
 
-
-def out_info(ws, msg):
-    ws.send(json.dumps({
-        "type": "out_info",
-        "msg": msg
-    }))
-def out_error(ws, msg):
-    ws.send(json.dumps({
-        "type": "out_error",
-        "msg": msg
-    }))
-def out_success(ws, msg):
-    ws.send(json.dumps({
-        "type": "out_success",
-        "msg": msg
-    }))
-
-def send(ws, type, data):
-    ws.send(json.dumps({
-        "type": type,
-        "option": data
-    }))
-
-
-def run_sel(fun, re_time=10, sleep=0.8):
-    num = 0
-    while True:
-        time.sleep(sleep)
-        if num >= re_time:
-            return None
-        try:
-            a = fun()
-            if a:
-                return a
-        except Exception as e:
-            pass
-        num += 1
-        time.sleep(0.5)
-
-def ip_date_back(content):
-    content = content.strip()
-
-    # 时间正则：包含相对时间、YYYY-MM-DD、MM-DD
-    time_pattern = (
-        r"(刚刚|刚才|\d+分钟前|\d+小时前|\d+天前|今天|昨天|前天|"
-        r"\d{4}-\d{2}-\d{2}|\d{2}-\d{2})"
-    )
-
-    # 完整正则，IP 属地可选
-    pattern = re.compile(
-        rf"{time_pattern}\s*([\u4e00-\u9fa5]+)?\s*回复"
-    )
-
-    match = pattern.search(content)
-    if match:
-        time_text = match.group(1)
-        ip_text = match.group(2) if match.group(2) else None
-    else:
-        time_text = None
-        ip_text = None
-
-    # 去掉时间和属地后的“回复”，得到干净内容
-    content_clean = pattern.sub("", content).strip()
-
-    print(f"原始: {content}")
-    print(f"时间: {time_text}, IP属地: {ip_text}")
-    print(f"内容: {content_clean}")
-    print("-" * 30)
-    return time_text, ip_text, content_clean
 
 def ip_date(content):
     content = content.strip()

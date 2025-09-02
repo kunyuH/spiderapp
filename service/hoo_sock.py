@@ -4,8 +4,9 @@ import threading
 from websocket import WebSocketApp
 import traceback
 from ascript.android.ui import Dialog
+from ascript.android import system
 
-from ..utils.tools import is_json
+from ..utils.tools import is_json, send
 from .global_context import GCT
 
 
@@ -14,8 +15,9 @@ class HooSock:
     func = None
     web_sock_key = 'Websocket'
 
-    def __init__(self, url):
+    def __init__(self, url, uuid=None):
         self.url = url
+        self.uuid = uuid
 
     def set_on_message(self, func):
         self.func = func
@@ -51,7 +53,9 @@ class HooSock:
                 print("####### on_error #######")
                 print("error：%s" % error)
                 traceback.print_exc()
-                Dialog.toast("连接异常", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
+                # Dialog.toast("连接异常", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
+                Dialog.confirm("连接已断开！", None, "确认")
+                system.exit()
 
             def on_close(ws,close_status_code, close_msg):
                 print("####### on_close #######")
@@ -60,7 +64,10 @@ class HooSock:
 
             def on_open(ws):
                 print("####### on_open #######")
-                # Dialog.toast("已连接", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
+                Dialog.toast("已连接", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
+                send(ws=ws,type='change_uuid',option={
+                    "uuid": self.uuid
+                })
 
             def server_thread():
                 # url = "ws://192.168.0.101:10102"

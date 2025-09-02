@@ -1,5 +1,6 @@
 import json
 import re
+import time
 import uuid
 from datetime import datetime, timedelta
 
@@ -80,3 +81,40 @@ def check_end():
     if GCT().get(is_end_key) is None:
         return False
     return GCT().get(is_end_key)
+
+def out_info(ws, msg):
+    ws.send(json.dumps({
+        "type": "out_info",
+        "msg": msg
+    }))
+def out_error(ws, msg):
+    ws.send(json.dumps({
+        "type": "out_error",
+        "msg": msg
+    }))
+def out_success(ws, msg):
+    ws.send(json.dumps({
+        "type": "out_success",
+        "msg": msg
+    }))
+
+def send(ws, type, option):
+    ws.send(json.dumps({
+        "type": type,
+        "option": option
+    }))
+
+def run_sel(fun, re_time=10, sleep=0.8):
+    num = 0
+    while True:
+        time.sleep(sleep)
+        if num >= re_time:
+            return None
+        try:
+            a = fun()
+            if a:
+                return a
+        except Exception as e:
+            pass
+        num += 1
+        time.sleep(0.5)

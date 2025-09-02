@@ -5,6 +5,7 @@ from ascript.android.ui import WebWindow
 import json
 from ascript.android.system import Device
 
+from ..service.xhs.note import on_message_note
 from ..service.hoo_sock import HooSock
 from ..utils.tools import off
 from ..service.xhs.common import on_message_content
@@ -27,17 +28,18 @@ def tunnel(k,v):
             print(v) # 用户点击确定并回传了数据
             resobj = json.loads(v)
             print(resobj)
+            uuid = resobj.get('uuid')
 
             def on_message(ws, type, id, option):
+                if type == 'xhs_gather_note':
+                    on_message_note(ws, id, option)
                 if type == 'xhs_gather_comment':
                     on_message_content(ws, id, option)
                 elif type == 'end':
                     off()
                     print('===============================================')
                 pass
-
-            # HooSock("ws://192.168.0.101:10102").set_on_message(on_message).start()
-            HooSock(f"ws://{resobj.get('ip')}").set_on_message(on_message).start()
+            HooSock(f"ws://{resobj.get('ip')}",uuid).set_on_message(on_message).start()
     except Exception as e:
         print(e)
         traceback.print_exc()
