@@ -9,7 +9,6 @@ from ascript.android import system
 from ..utils.tools import is_json, send
 from .global_context import GCT
 
-
 class HooSock:
 
     func = None
@@ -31,16 +30,22 @@ class HooSock:
                 if message == '__ping__':
                     ws.send('__pong__')
                     print('__pong__')
+                elif message == "__server_shutdown__":
+                    print("服务端关闭了，客户端准备断开")
+                    ws.close()
+                    return
                 else:
                     try:
                         # print("####### on_message #######")
                         # print("message：%s" % message)
                         if is_json(message):
                             msg = json.loads(message)
+                            # 客户端id
+                            # client_id = msg.get('id')
                             # 把耗时逻辑放到子线程执行
                             threading.Thread(
                                 target=self.func,
-                                args=(ws, msg.get('type'), msg.get('id'), msg.get('option')),
+                                args=(ws, msg.get('type'), msg.get('option')),
                                 daemon=True
                             ).start()
 
@@ -61,6 +66,8 @@ class HooSock:
                 print("####### on_close #######")
                 print("close_status_code:", close_status_code)
                 print("close_msg:", close_msg)
+                Dialog.confirm("连接已断开！", None, "确认")
+                system.exit()
 
             def on_open(ws):
                 print("####### on_open #######")
@@ -78,8 +85,9 @@ class HooSock:
                                   on_open=on_open,
                                   on_message=on_message,
                                   on_error=on_error,
-                                  on_close=on_close)
+                                  on_close=on_close
+                )
                 GCT().set(self.web_sock_key, ws)
-                ws.run_forever()
+                ws.run_forever()  # 不传 timeout
 
             threading.Thread(target=server_thread, daemon=True).start()

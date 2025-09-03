@@ -15,8 +15,8 @@ from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_d
     out_info
 
 
-def on_message_note(ws , id, option):
-    # print(option)
+def on_message_note(ws, option):
+    print(option)
     on()
     note_id = option.get('note_id')
     maxPage = option.get('maxPage')

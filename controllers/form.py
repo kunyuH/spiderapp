@@ -45,11 +45,11 @@ def tunnel(k,v=None):
             print(resobj)
             app_uuid = resobj.get('app_uuid')
 
-            def on_message(ws, type, id, option):
+            def on_message(ws, type, option):
                 if type == 'xhs_gather_note':
-                    on_message_note(ws, id, option)
+                    on_message_note(ws, option)
                 if type == 'xhs_gather_comment':
-                    on_message_content(ws, id, option)
+                    on_message_content(ws, option)
                 elif type == 'end':
                     off()
                     print('===============================================')

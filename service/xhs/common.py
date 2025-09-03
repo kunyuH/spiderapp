@@ -104,7 +104,7 @@ def content_filter(content_data,fiter_data):
         return content_data
     return None
 
-def on_message_content(ws , id, option):
+def on_message_content(ws, option):
     # print(option)
     on()
     note_id = option.get('note_id')
