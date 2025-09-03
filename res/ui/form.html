@@ -11,7 +11,7 @@
 <body class="layui-bg-gray">
     <form class="layui-form " lay-filter="formFilter"
         style="margin-left: 10px; margin-right: 10px; padding-bottom: 10px;">
-        <div style="">
+        <div>
             <div class="layui-col-xs12 layui-bg-blue"
                 style="display: flex; margin: 0;height:50px; margin-bottom: 10px; position: fixed; top: 0px; left: 0px; z-index: 10;">
                 <div class="layui-col-xs4" style="display: flex; ">
@@ -27,28 +27,25 @@
                         class="layui-btn layui-btn-warm layui-btn-radius"
                         style="margin:auto; margin-right: 10px;">连接</button>
                 </div>
-
             </div>
-
-        <div style="left: 0px; width: 100%; overflow: scroll; padding-top: 60px; ">
-            <div class="layui-form-item">
-                <div class="layui-inline">
-                    <label class="layui-form-label">名称</label>
-                    <div class="layui-input-inline">
-                        <input id="appui_app_uuid" type="text" name="app_uuid" placeholder="请输入当前采集器名称" autocomplete="off"
-                            class="layui-input">
+            <div style="left: 0px; width: 100%; overflow: scroll; padding-top: 60px; ">
+                <div class="layui-form-item">
+                    <div class="layui-inline">
+                        <label class="layui-form-label">名称</label>
+                        <div class="layui-input-inline">
+                            <input id="appui_app_uuid" type="text" name="app_uuid" placeholder="请输入当前采集器名称" autocomplete="off"
+                                class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label">服务器</label>
+                        <div class="layui-input-inline">
+                            <input id="appui_user" type="text" name="ip" placeholder="请输入服务器ip" autocomplete="off"
+                                class="layui-input">
+                        </div>
                     </div>
                 </div>
-                <div class="layui-inline">
-                    <label class="layui-form-label">服务器</label>
-                    <div class="layui-input-inline">
-                        <input id="appui_user" type="text" name="ip" placeholder="请输入服务器ip" autocomplete="off"
-                            class="layui-input">
-                    </div>
-                </div>
             </div>
-        </div>
-
         </div>
     </form>
 
