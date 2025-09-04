@@ -1,8 +1,8 @@
+import hashlib
 import json
 import re
 import time
 import traceback
-import requests
 from ascript.android.system import R
 from android.content import Intent
 from android.net import Uri
@@ -13,7 +13,7 @@ from ascript.android.system import Device
 
 from ..global_context import GCT
 from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, send, \
-    out_info, run_sel
+    out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl
 
 
 def on_message_note(ws, option):
@@ -70,27 +70,100 @@ def on_message_note(ws, option):
     # 存放本次采集到的笔记数据
     gather_note = []
     all_note = GCT().get('all_note')
+    data_keys = []
+
+    g_num = 0
+    old = 0
+
     while check_end():
+
         # 获取笔记数据
-        notes = Selector(2).path("/FrameLayout/LinearLayout/ViewPager/RecyclerView/FrameLayout/TextView").parent(1).find_all()
+        # notes = Selector(2).path("/FrameLayout/LinearLayout/ViewPager/RecyclerView/FrameLayout/TextView").parent(1).find_all()
+        notes = Selector(3).type("FrameLayout").clickable(True).find_all()
+        if notes is None:
+            notes = []
         for note in notes:
+            note_info = {}
             # 获取笔记标题
-            note_title = note.find(Selector(2).type('TextView')).text
-            print(note_title)
+            note_title = run_sel(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, 4,0.1)
+            # 用户昵称
+            author_name = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(1)).text, 4,0.1)
+            # 发布时间
+            push_time = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(2)).text, 4,0.1)
+            print(f"==================={push_time}=={note_title}")
+            push_time = parse_chinese_time(push_time)
+            # 点赞数
+            like_num = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(3)).text, 4,0.1)
+            if like_num:
+                like_num = like_num.replace('赞', '0')
+
+            print(f"{author_name}=={push_time}=={like_num}=={note_title}")
+            if like_num is None:
+                exit()
+
+            data_key = hashlib.md5(f"{note_title}{author_name}".encode('utf-8')).hexdigest()
+            print(data_key)
+            # true 已经抓过了 不再抓取
+            if data_key in data_keys:
+                continue
+
+            note_info = {
+                '来源': keyword,
+                '标题': note_title,
+                '封面图': '',
+                '用户名称': author_name,
+                '用户主页链接': '',
+                '用户ID': '',
+                '发布时间': push_time,
+                '点赞数': like_num,
+            }
+
+            data_keys.append(data_key)
             # 点击笔记
             note.find(Selector().click())
+            time.sleep(0.5)
             # 获取笔记详情  两种情况 1.笔记  2.视频
             # 获取笔记
-            note_info = get_note_info()
+            note_info = get_note_info(note_info)
+            print('======note_info=====')
+            """
+            @以后绝不逃课 在小红书收获了74次赞与收藏，查看Ta的主页>> https://xhslink.com/m/1gNrtOT3H4j
+            @王先生 在小红书收获了28次赞与收藏，查看Ta的主页>> https://xhslink.com/m/7vCVG2f4a55
+            """
+
+            print(note_info)
             note_id = note_info.get('note_id')
-            if note_id is not None:
-                if note_id not in all_note:
-                    all_note.append(note_id)
-                    gather_note.append(note_id)
+            if note_id is not None or note_id not in all_note:
+                all_note.append(note_id)
+                gather_note.append({
+                    '来源': note_info.get('来源'),
+                    '标题': note_info.get('标题'),
+                    '用户名称': note_info.get('用户名称'),
+                    '发布时间': note_info.get('发布时间'),
+                    '点赞数': note_info.get('点赞数'),
+
+                    '笔记ID': note_info.get('笔记ID'),
+                    '笔记链接': note_info.get('笔记链接'),
+                    '笔记分享链接': note_info.get('笔记分享链接')
+                })
+                out_success(ws, f'{(page-1)*page_size + len(gather_note)}. {note_title}')
+
+                # 判断是否足够一页数据了
+                if len(gather_note) >= page_size:
+                    out_info(ws, f'第{page}页采集完， 采集到 {len(gather_note)} 条笔记')
+                    off()
+                    break
             # 返回
-            action.Key.back()
+            print('===========返回=====')
+            time.sleep(0.2)
+            if note_info.get('类型') == 'video':
+                Selector(2).desc("返回").type("ImageView").click().find()
+            else:
+                Selector(2).type("ImageView").click().find()
+            time.sleep(0.2)
 
         # 往下滑动
+        print('======滑动======')
         # 滑动
         display = Device.display()
         width = display.widthPixels
@@ -100,20 +173,29 @@ def on_message_note(ws, option):
         # 注意：向下滑动，终点y比起点y大
         action.slide(
             x=width // 2,
-            y=int(height * 0.8),  # 从屏幕下方开始
+            y=int(height * 0.7),  # 从屏幕下方开始
             x1=width // 2,
-            y1=int(height * 0.2),  # 到屏幕上方
+            y1=int(height * 0.3),  # 到屏幕上方
             dur=500  # 持续时间 ms
         )
 
+        time.sleep(0.6)
+        # exit()
 
-    gather_comment = []
-    print(page, page_size, sort_type, filter_note_type, filter_note_time, filter_note_range)
+        if g_num >= 3:
+            break
+        if len(gather_note) > old:
+            g_num = 0
+        else:
+            g_num += 1
 
+        old = len(gather_note)
 
+    send(ws, 'func_phone_xhs_note_data', gather_note)
+    print('func_phone_xhs_note_data')
     pass
 
-def get_note_info():
+def get_note_info(note_info=None):
     """
     获取笔记详情  两种情况 1.笔记  2.视频
     :return:
@@ -131,17 +213,42 @@ def get_note_info():
         Selector(2).type("Button").desc("分享.*").click().find()
     else:
         Selector(2).type("ImageView").drawingOrder(2).click().find()
-    run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.1)
-    share_url = Clipboard.get()
-    share_url = re.findall(r'https?://[^\s]+', share_url)
-    share_url = share_url[0] if share_url else None
+    run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 1)
+    share_url_str = Clipboard.get()
+    share_url = getUrl(share_url_str)
+    print('========点击复制后==========')
+    print(share_url)
+    if share_url is None:
+        if is_video:
+            Selector(2).type("Button").desc("分享.*").click().find()
+        else:
+            Selector(2).type("ImageView").drawingOrder(2).click().find()
+        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 1)
+        share_url_str = Clipboard.get()
+        share_url = getUrl(share_url_str)
+
+    print(share_url)
+    if share_url is None:
+        exit()
     # 分享链接转实际链接
-    url = getLinkToNoteUrl(option={
-        'url': share_url
-    })
+    url = share_url
+    if 'xhslink' in share_url:
+        url = getLinkToNoteUrl(option={
+            'url': share_url
+        })
+
+    note_info['类型'] = 'video' if is_video else 'normal'
+    note_info['笔记分享链接'] = share_url
+    note_info['笔记ID'] = getNoteIdByUrl(url)
+    note_info['笔记链接'] = url
+
     try:
         # ===============获取作者昵称================
-        author_name = Selector(2).path("/FrameLayout/RelativeLayout/LinearLayout/TextView").type("TextView").find().text
+        if '用户名称' not in note_info:
+            if is_video:
+                note_info['用户名称'] = run_sel(lambda :Selector(2).path("/FrameLayout/RecyclerView/ViewGroup/LinearLayout/ViewGroup/Button").type("Button").desc("作者.*").find(),4,0.1).desc
+            else:
+                note_info['用户名称'] = run_sel(lambda :Selector(2).type("TextView").find(),4,0.1).text
         # ===============获取笔记内容================
         # ===============获取笔记发布时间================
         # ===============获取笔记发布地点================
@@ -149,11 +256,8 @@ def get_note_info():
     except Exception as e:
         print('异常 note ++++++++++++++++++++++++++')
         print(traceback.format_exc())
-    return {
-        'share_url': share_url,
-        'note_id': getNoteIdByUrl(url),
-        'url': url
-    }
+
+    return note_info
 
 def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
     # 点击下拉筛选
@@ -195,30 +299,5 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
     Selector(2).text("收起").type("TextView").parent(1).click().find()
 
 
-def getLinkToNoteUrl(option=None):
-    # 参数组装
-    if option is None:
-        option = {}
-    url = option['url'] if 'url' in option else ''
 
-    res = requests.get(url, allow_redirects=False)  # 不跟随跳转# 默认是 True
-    if res.is_redirect or res.status_code in (301, 302, 303, 307, 308):
-        redirect_url = res.headers.get('Location')
-        return redirect_url
 
-    if 'discovery/item' in res.url:
-        return res.url
-
-    if res.history:
-        for history in res.history:
-            if history.status_code == 302:
-                return history.url
-    return ''
-
-def getNoteIdByUrl(url):
-    """
-    从笔记链接中获取笔记ID
-    :param url:
-    :return:
-    """
-    return str(url).split("/")[-1].split("?")[0]

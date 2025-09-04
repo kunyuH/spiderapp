@@ -12,7 +12,7 @@ from ascript.android import action
 from ascript.android.system import Device
 
 from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, \
-    out_info, out_success, send, run_sel
+    out_info, out_success, send, run_sel, getUrl, getLinkToNoteUrl
 
 
 def ip_date(content):
@@ -276,6 +276,11 @@ def on_message_content(ws, option):
                                 run_sel(lambda :Selector(2).desc("复制链接").type("Button").child().type("ViewGroup").click().find())
                                 # exit()
                                 user_url = Clipboard.get()
+                                user_url = getUrl(user_url)
+                                if 'xhslink' in user_url:
+                                    user_url = getLinkToNoteUrl(option={
+                                        'url': user_url
+                                    })
                                 content_data['user_info']['red_id'] = red_id
                                 content_data['user_info']['gender'] = gender
                                 content_data['user_info']['follows'] = follows

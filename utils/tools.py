@@ -3,6 +3,7 @@ import re
 import time
 import uuid
 from datetime import datetime, timedelta
+import requests
 
 from ..service.global_context import GCT
 
@@ -118,3 +119,35 @@ def run_sel(fun, re_time=10, sleep=0.8):
             pass
         num += 1
         time.sleep(0.5)
+
+def getLinkToNoteUrl(option=None):
+    # 参数组装
+    if option is None:
+        option = {}
+    url = option['url'] if 'url' in option else ''
+
+    res = requests.get(url, allow_redirects=False)  # 不跟随跳转# 默认是 True
+    if res.is_redirect or res.status_code in (301, 302, 303, 307, 308):
+        redirect_url = res.headers.get('Location')
+        return redirect_url
+
+    if 'discovery/item' in res.url or 'user/profile' in res.url:
+        return res.url
+
+    if res.history:
+        for history in res.history:
+            if history.status_code == 302:
+                return history.url
+    return ''
+
+def getNoteIdByUrl(url):
+    """
+    从笔记链接中获取笔记ID
+    :param url:
+    :return:
+    """
+    return str(url).split("/")[-1].split("?")[0]
+
+def getUrl(str):
+    strs = re.findall(r'https?://[^\s]+', str)
+    return strs[0] if strs else None
