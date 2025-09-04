@@ -173,6 +173,13 @@ def on_message_note(ws, option):
             else:
                 Selector(2).type("ImageView").click().find()
             time.sleep(0.2)
+            if is_note_detail_page():
+                action.Key.back()
+                time.sleep(0.2)
+                if is_note_detail_page():
+                    action.Key.back()
+                    time.sleep(0.2)
+
 
             if is_jump:
                 off()
@@ -315,6 +322,19 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
 
     # 点击收起
     Selector(2).text("收起").type("TextView").parent(1).click().find()
+
+def is_note_detail_page():
+    try:
+        if Selector(2).text("关注").type("TextView").find():
+            if Selector(2).text("作者").type("TextView").find():
+                return True
+        if Selector(2).desc("作者.*").type("Button").find():
+            if Selector(2).text("关注").type("Button").find():
+                return True
+
+        return False
+    except:
+        return False
 
 
 
