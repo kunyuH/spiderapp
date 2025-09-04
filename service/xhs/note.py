@@ -39,6 +39,7 @@ def on_message_note(ws, option):
     """
     on()
     keyword = option.get('keyword')
+    max_num = option.get('max_num')
     page = option.get('page')
     page_size = option.get('page_size')
     sort_type = option.get('filters')[0].get('tags')[0]         # 排序依据
@@ -64,33 +65,39 @@ def on_message_note(ws, option):
             check_search(sort_type, filter_note_type, filter_note_time, filter_note_range)
             time.sleep(2)
 
+        # 存放全部采集到的笔记唯一标识  用于确认搜索页面上的笔记是否采集过了 标题加昵称来确认
+        GCT().set('data_keys', [])
         # 存放全部采集到的笔记数据  用于确认页面上的笔记是否采集过了
         GCT().set('all_note', [])
 
     # 存放本次采集到的笔记数据
     gather_note = []
+    data_keys = GCT().get('data_keys')
     all_note = GCT().get('all_note')
-    data_keys = []
 
     g_num = 0
     old = 0
 
+    is_jump = False
     while check_end():
-
         # 获取笔记数据
         # notes = Selector(2).path("/FrameLayout/LinearLayout/ViewPager/RecyclerView/FrameLayout/TextView").parent(1).find_all()
         notes = Selector(3).type("FrameLayout").clickable(True).find_all()
         if notes is None:
             notes = []
         for note in notes:
-            note_info = {}
             # 获取笔记标题
-            note_title = run_sel(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, 4,0.1)
+            note_title = run_sel(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, 3,0.1)
+            if note_title is None:
+                continue
             # 用户昵称
-            author_name = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(1)).text, 4,0.1)
+            author_name = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(1)).text, 3,0.1)
+            if note_title is None:
+                continue
             # 发布时间
-            push_time = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(2)).text, 4,0.1)
-            print(f"==================={push_time}=={note_title}")
+            push_time = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(2)).text, 3,0.1)
+            if push_time is None or author_name is None:
+                continue
             push_time = parse_chinese_time(push_time)
             # 点赞数
             like_num = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(3)).text, 4,0.1)
@@ -126,14 +133,12 @@ def on_message_note(ws, option):
             # 获取笔记
             note_info = get_note_info(note_info)
             print('======note_info=====')
-            """
-            @以后绝不逃课 在小红书收获了74次赞与收藏，查看Ta的主页>> https://xhslink.com/m/1gNrtOT3H4j
-            @王先生 在小红书收获了28次赞与收藏，查看Ta的主页>> https://xhslink.com/m/7vCVG2f4a55
-            """
-
             print(note_info)
-            note_id = note_info.get('note_id')
-            if note_id is not None or note_id not in all_note:
+            note_id = note_info.get('笔记ID')
+            # print(note_id)
+            # print(all_note)
+            # print(note_id not in all_note)
+            if note_id is not None and note_id not in all_note:
                 all_note.append(note_id)
                 gather_note.append({
                     '来源': note_info.get('来源'),
@@ -146,13 +151,20 @@ def on_message_note(ws, option):
                     '笔记链接': note_info.get('笔记链接'),
                     '笔记分享链接': note_info.get('笔记分享链接')
                 })
-                out_success(ws, f'{(page-1)*page_size + len(gather_note)}. {note_title}')
+                # 采集了多少条
+                gr_total = (page-1)*page_size + len(gather_note)
+
+                out_success(ws, f'{gr_total}. {note_title}')
 
                 # 判断是否足够一页数据了
                 if len(gather_note) >= page_size:
                     out_info(ws, f'第{page}页采集完， 采集到 {len(gather_note)} 条笔记')
-                    off()
-                    break
+                    is_jump = True
+                # 已经取够数量的笔记了
+                if gr_total >= max_num:
+                    out_info(ws, f'已经采集到 {gr_total} 条笔记， 【{keyword}】采集完成')
+                    is_jump = True
+
             # 返回
             print('===========返回=====')
             time.sleep(0.2)
@@ -162,6 +174,12 @@ def on_message_note(ws, option):
                 Selector(2).type("ImageView").click().find()
             time.sleep(0.2)
 
+            if is_jump:
+                off()
+                break
+
+        GCT().set('data_keys', data_keys)
+        GCT().set('all_note', all_note)
         # 往下滑动
         print('======滑动======')
         # 滑动
@@ -213,7 +231,7 @@ def get_note_info(note_info=None):
         Selector(2).type("Button").desc("分享.*").click().find()
     else:
         Selector(2).type("ImageView").drawingOrder(2).click().find()
-    run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 1)
+    run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
     share_url_str = Clipboard.get()
     share_url = getUrl(share_url_str)
     print('========点击复制后==========')
@@ -223,7 +241,7 @@ def get_note_info(note_info=None):
             Selector(2).type("Button").desc("分享.*").click().find()
         else:
             Selector(2).type("ImageView").drawingOrder(2).click().find()
-        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 1)
+        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
         share_url_str = Clipboard.get()
         share_url = getUrl(share_url_str)
 
