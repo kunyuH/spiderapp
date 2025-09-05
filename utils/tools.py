@@ -1,5 +1,6 @@
 import json
 import re
+import threading
 import time
 import uuid
 from datetime import datetime, timedelta
@@ -74,6 +75,7 @@ def parse_chinese_time(text):
 is_end_key = 'sys_is_end_key'
 def off():
     GCT().remove(is_end_key)
+    f_jump_sleep()
 
 def on():
     GCT().set(is_end_key, True)
@@ -151,3 +153,38 @@ def getNoteIdByUrl(url):
 def getUrl(str):
     strs = re.findall(r'https?://[^\s]+', str)
     return strs[0] if strs else None
+# 初始化全局锁
+events_lock = threading.Lock()
+t_sleep_key = 'sys_t_sleep'
+events = {}
+
+def t_sleep(seconds):
+    """
+    延时
+    """
+    global events
+    stop_event = threading.Event()
+    event_id = generate_guid()
+    # 注册事件（加锁）
+    with events_lock:
+        events[event_id] = stop_event
+
+    if events[event_id].wait(timeout=seconds):
+        with events_lock:
+            events.pop(event_id,None)
+        raise Exception('强制退出延迟执行', 'jump')
+    else:
+        with events_lock:
+            events.pop(event_id, None)
+        pass
+def f_jump_sleep():
+    """
+    可强制退出延迟
+    """
+    global events
+    # with events_lock:
+    #     current_events = list(events.values())  # 拷贝一份当前事件对象列表
+    #     events.clear()  # 清空原字典，避免线程再用旧的
+
+    for event in events.values():
+        event.set()  # 安全触发所有等待中的事件

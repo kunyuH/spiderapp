@@ -13,11 +13,11 @@ from ascript.android.system import Device
 
 from ..global_context import GCT
 from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, send, \
-    out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl
+    out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl, t_sleep
 
 
 def on_message_note(ws, option):
-    print(option)
+    # print(option)
     """
     json_ = {
             "keyword": keyword,
@@ -38,6 +38,7 @@ def on_message_note(ws, option):
         }
     """
     on()
+    frequency = option.get('frequency')
     keyword = option.get('keyword')
     max_num = option.get('max_num')
     page = option.get('page')
@@ -69,7 +70,9 @@ def on_message_note(ws, option):
         GCT().set('data_keys', [])
         # 存放全部采集到的笔记数据  用于确认页面上的笔记是否采集过了
         GCT().set('all_note', [])
-
+    else:
+        # 非第一页 开始暂停
+        t_sleep(frequency)
     # 存放本次采集到的笔记数据
     gather_note = []
     data_keys = GCT().get('data_keys')
@@ -104,12 +107,12 @@ def on_message_note(ws, option):
             if like_num:
                 like_num = like_num.replace('赞', '0')
 
-            print(f"{author_name}=={push_time}=={like_num}=={note_title}")
-            if like_num is None:
-                exit()
+            # print(f"{author_name}=={push_time}=={like_num}=={note_title}")
+            # if like_num is None:
+            #     exit()
 
             data_key = hashlib.md5(f"{note_title}{author_name}".encode('utf-8')).hexdigest()
-            print(data_key)
+            # print(data_key)
             # true 已经抓过了 不再抓取
             if data_key in data_keys:
                 continue
@@ -133,7 +136,7 @@ def on_message_note(ws, option):
             # 获取笔记
             note_info = get_note_info(note_info)
             print('======note_info=====')
-            print(note_info)
+            # print(note_info)
             note_id = note_info.get('笔记ID')
             # print(note_id)
             # print(all_note)
