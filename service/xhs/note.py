@@ -13,7 +13,7 @@ from ascript.android.system import Device
 
 from ..global_context import GCT
 from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, send, \
-    out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl, t_sleep
+    out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl, t_sleep, run_sel_s
 
 
 def on_message_note(ws, option):
@@ -88,22 +88,26 @@ def on_message_note(ws, option):
         notes = Selector(3).type("FrameLayout").clickable(True).find_all()
         if notes is None:
             notes = []
-        for note in notes:
+        for idx, note in enumerate(notes, start=1):  # start=1 表示从 1 开始计数
+            # 第二次迭代开始 就是能取到则 取 不能取到就跳过  用于加快速度
+            re_time = 5
+            if idx > 1:
+                re_time = 1
             # 获取笔记标题
-            note_title = run_sel(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, 3,0.1)
+            note_title = run_sel_s(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, re_time)
             if note_title is None:
                 continue
             # 用户昵称
-            author_name = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(1)).text, 3,0.1)
+            author_name = run_sel_s(lambda :note.find(Selector(2).type('TextView').drawingOrder(1)).text, re_time)
             if note_title is None:
                 continue
             # 发布时间
-            push_time = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(2)).text, 3,0.1)
+            push_time = run_sel_s(lambda :note.find(Selector(2).type('TextView').drawingOrder(2)).text, re_time)
             if push_time is None or author_name is None:
                 continue
             push_time = parse_chinese_time(push_time)
             # 点赞数
-            like_num = run_sel(lambda :note.find(Selector(2).type('TextView').drawingOrder(3)).text, 4,0.1)
+            like_num = run_sel_s(lambda :note.find(Selector(2).type('TextView').drawingOrder(3)).text, re_time)
             if like_num:
                 like_num = like_num.replace('赞', '0')
 
@@ -129,6 +133,14 @@ def on_message_note(ws, option):
             }
 
             data_keys.append(data_key)
+
+            # """
+            # 每50 取一个
+            # """
+            # print(len(data_keys))
+            # if (len(data_keys)-1) % 10 != 0:
+            #     continue
+
             # 点击笔记
             note.find(Selector().click())
             time.sleep(0.5)
@@ -201,13 +213,13 @@ def on_message_note(ws, option):
         # 注意：向下滑动，终点y比起点y大
         action.slide(
             x=width // 2,
-            y=int(height * 0.7),  # 从屏幕下方开始
+            y=int(height * 0.8),  # 从屏幕下方开始
             x1=width // 2,
-            y1=int(height * 0.3),  # 到屏幕上方
+            y1=int(height * 0.2),  # 到屏幕上方
             dur=500  # 持续时间 ms
         )
 
-        time.sleep(0.6)
+        time.sleep(0.2)
         # exit()
 
         if g_num >= 3:

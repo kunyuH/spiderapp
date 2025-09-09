@@ -122,6 +122,20 @@ def run_sel(fun, re_time=10, sleep=0.8):
         num += 1
         time.sleep(0.5)
 
+def run_sel_s(fun, re_time=1):
+    num = 0
+    while True:
+        if num >= (re_time*10):
+            return None
+        try:
+            a = fun()
+            if a:
+                return a
+        except Exception as e:
+            pass
+        num += 1
+        time.sleep(0.1)
+
 def getLinkToNoteUrl(option=None):
     # 参数组装
     if option is None:
