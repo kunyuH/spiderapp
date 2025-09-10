@@ -80,7 +80,7 @@ def on_message_note(ws, option):
 
     g_num = 0
     old = 0
-
+    is_end = False # 是否采集完了  要把这个数据推送给客户端
     is_jump = False
     while check_end():
         # 获取笔记数据
@@ -158,9 +158,12 @@ def on_message_note(ws, option):
                 gather_note.append({
                     '来源': note_info.get('来源'),
                     '标题': note_info.get('标题'),
+                    '内容': note_info.get('内容'),
                     '用户名称': note_info.get('用户名称'),
                     '发布时间': note_info.get('发布时间'),
                     '点赞数': note_info.get('点赞数'),
+                    '收藏数': note_info.get('收藏数'),
+                    '评论数': note_info.get('评论数'),
 
                     '笔记ID': note_info.get('笔记ID'),
                     '笔记链接': note_info.get('笔记链接'),
@@ -179,6 +182,7 @@ def on_message_note(ws, option):
                 if gr_total >= max_num:
                     out_info(ws, f'已经采集到 {gr_total} 条笔记， 【{keyword}】采集完成')
                     is_jump = True
+                    is_end = True
 
             # 返回
             print('===========返回=====')
@@ -231,7 +235,10 @@ def on_message_note(ws, option):
 
         old = len(gather_note)
 
-    send(ws, 'func_phone_xhs_note_data', gather_note)
+    send(ws, 'func_phone_xhs_note_data', {
+        'data': gather_note,
+        'is_end': is_end
+    })
     print('func_phone_xhs_note_data')
     pass
 
@@ -289,10 +296,29 @@ def get_note_info(note_info=None):
                 note_info['用户名称'] = run_sel(lambda :Selector(2).path("/FrameLayout/RecyclerView/ViewGroup/LinearLayout/ViewGroup/Button").type("Button").desc("作者.*").find(),4,0.1).desc
             else:
                 note_info['用户名称'] = run_sel(lambda :Selector(2).type("TextView").find(),4,0.1).text
+        # ===============获取笔记标题================
         # ===============获取笔记内容================
         # ===============获取笔记发布时间================
         # ===============获取笔记发布地点================
         # ===============获取笔记点赞 收藏 评论 数================
+        if is_video:
+            note_info['内容'] = run_sel_s(lambda :Selector(2).id("com.xingin.xhs:id/noteContentText").find(),2).desc
+            if '评论数' not in note_info:
+                a = run_sel_s(lambda: Selector(2).type("LinearLayout").drawingOrder(3).child().find_all(), 2)
+                note_info['点赞数'] = a[0].desc.replace(' ', '').replace('点赞', '')
+                note_info['评论数'] = a[1].desc.replace(' ', '').replace('评论', '')
+                note_info['收藏数'] = a[2].desc.replace(' ', '').replace('收藏', '')
+        else:
+            note_info['标题'] = run_sel_s(lambda :Selector(2).path("/FrameLayout/TextView").drawingOrder(5).find(),2).text
+            note_info['内容'] = run_sel_s(lambda :Selector(2).path("/FrameLayout/TextView").drawingOrder(6).find(),2).text
+
+            if '评论数' not in note_info:
+                a = run_sel_s(lambda: Selector(2).type("Button").find_all(), 2)
+
+                note_info['点赞数'] = a[0].desc.replace(' ', '').replace('点赞', '')
+                note_info['收藏数'] = a[1].desc.replace(' ', '').replace('收藏', '')
+                note_info['评论数'] = a[2].desc.replace(' ', '').replace('评论', '')
+
     except Exception as e:
         print('异常 note ++++++++++++++++++++++++++')
         print(traceback.format_exc())
