@@ -16,65 +16,41 @@ from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_d
     out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl, t_sleep, run_sel_s
 
 
-def on_message_note(ws, option):
+def on_message_dm(ws, option):
+    # 打印接收到的选项（已注释）
     # print(option)
     """
-    json_ = {
-            "keyword": keyword,
-            "is_shop": is_shop,
-            "page": gct.get('page'),
-            "page_size": 10,
-            "search_id": get_search_id(),
-            "sort": "general",
-            "note_type": 0,
-            "ext_flags": [],
-            "image_formats": ["jpg", "webp", "avif"],
-            "filters": [
-                {"tags": [sort_type], "type": "sort_type"},# 排序依据
-                {"tags": [filter_note_type], "type": "filter_note_type"},           # 笔记类型
-                {"tags": [filter_note_time], "type": "filter_note_time"},           # 发布时间
-                {"tags": [filter_note_range], "type": "filter_note_range"},          # 搜索范围
-                {"tags": ["不限"], "type": "filter_pos_distance"},        # 位置距离 不做更改 需要用户授权获取当前位置信息
-            ]
-        }
+    处理私信消息的函数
+    参数:
+        ws: WebSocket连接对象
+        option: 包含用户ID和消息的字典
     """
-    on()
-    frequency = option.get('frequency')
-    is_shop = option.get('is_shop')
-    keyword = option.get('keyword')
-    max_num = option.get('max_num')
-    page = option.get('page')
-    page_size = option.get('page_size')
-    sort_type = option.get('filters')[0].get('tags')[0]         # 排序依据
-    filter_note_type = option.get('filters')[1].get('tags')[0]  # 笔记类型
-    filter_note_time = option.get('filters')[2].get('tags')[0]  # 发布时间
-    filter_note_range = option.get('filters')[3].get('tags')[0] # 搜索范围
+    on()  # 启动某个功能或服务
+    # 从选项中获取用户ID和消息内容
+    userId = option.get('userId')
+    msg = option.get('msg')
 
-    # 采集第一页才需要 进入笔记搜索页 以及 点击筛选项
-    if page == 1:
-        # 进入这个笔记内
-        uri = Uri.parse(f"xhsdiscover://search/result?keyword={keyword}")
-        it = Intent(Intent.ACTION_VIEW, uri)
-        it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        R.context.startActivity(it)
-        out_info(ws, f"正在搜索关键词： {keyword}")
+    # 进入这个用户主页内
+    uri = Uri.parse(f"xhsdiscover://user/{userId}")
+    it = Intent(Intent.ACTION_VIEW, uri)
+    it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    R.context.startActivity(it)
+    out_info(ws, f"正在私信： {userId}")
 
-        # 等待搜索结果加载完成
-        run_sel(lambda :Selector(2).type("ActionBar\$Tab").find(),4,0.1)
+    # 等待搜索结果加载完成
+    run_sel(lambda :Selector(2).type("ActionBar\$Tab").find(),4,0.1)
 
-        # 需添加筛选项情况
-        # 存在某个非默认的  不是综合 不是不限
-        if sort_type != 'general' or filter_note_type != '不限' or filter_note_time != '不限' or filter_note_range != '不限':
-            check_search(sort_type, filter_note_type, filter_note_time, filter_note_range)
-            time.sleep(2)
+    # 需添加筛选项情况
+    # 存在某个非默认的  不是综合 不是不限
+    if sort_type != 'general' or filter_note_type != '不限' or filter_note_time != '不限' or filter_note_range != '不限':
+        check_search(sort_type, filter_note_type, filter_note_time, filter_note_range)
+        time.sleep(2)
 
-        # 存放全部采集到的笔记唯一标识  用于确认搜索页面上的笔记是否采集过了 标题加昵称来确认
-        GCT().set('data_keys', [])
-        # 存放全部采集到的笔记数据  用于确认页面上的笔记是否采集过了
-        GCT().set('all_note', [])
-    else:
-        # 非第一页 开始暂停
-        t_sleep(frequency)
+    # 存放全部采集到的笔记唯一标识  用于确认搜索页面上的笔记是否采集过了 标题加昵称来确认
+    GCT().set('data_keys', [])
+    # 存放全部采集到的笔记数据  用于确认页面上的笔记是否采集过了
+    GCT().set('all_note', [])
+
     # 存放本次采集到的笔记数据
     gather_note = []
     data_keys = GCT().get('data_keys')
@@ -91,21 +67,14 @@ def on_message_note(ws, option):
         if notes is None:
             notes = []
         for idx, note in enumerate(notes, start=1):  # start=1 表示从 1 开始计数
-
-            print('=====笔记项=======')
-            t1 = time.time()
-
             # 第二次迭代开始 就是能取到则 取 不能取到就跳过  用于加快速度
-            re_time = 3
+            re_time = 5
             if idx > 1:
-                re_time = 0.2
+                re_time = 1
             # 获取笔记标题
             note_title = run_sel_s(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, re_time)
             if note_title is None:
                 continue
-
-            t2 = time.time()
-            print(f"耗时：{t2-t1}")
             # 用户昵称
             author_name = run_sel_s(lambda :note.find(Selector(2).type('TextView').drawingOrder(1)).text, re_time)
             if note_title is None:
@@ -155,7 +124,7 @@ def on_message_note(ws, option):
             time.sleep(0.5)
             # 获取笔记详情  两种情况 1.笔记  2.视频
             # 获取笔记
-            note_info = get_note_info(note_info,is_shop)
+            note_info = get_note_info(note_info)
             print('======note_info=====')
             # print(note_info)
             note_id = note_info.get('笔记ID')
@@ -176,20 +145,7 @@ def on_message_note(ws, option):
 
                     '笔记ID': note_info.get('笔记ID'),
                     '笔记链接': note_info.get('笔记链接'),
-                    '笔记分享链接': note_info.get('笔记分享链接'),
-
-                    '用户小红书号': note_info.get('用户小红书号'),
-                    '用户IP属地': note_info.get('用户IP属地'),
-                    '用户简介': note_info.get('用户简介'),
-                    '用户性别': note_info.get('用户性别'),
-                    '用户关注': note_info.get('用户关注'),
-                    '用户粉丝': note_info.get('用户粉丝'),
-                    '用户获赞与收藏': note_info.get('用户获赞与收藏'),
-                    '是否有店铺': note_info.get('是否有店铺'),
-                    '店铺名称': note_info.get('店铺名称'),
-                    '店铺星级': note_info.get('店铺星级'),
-                    '店铺已售': note_info.get('店铺已售'),
-                    '店铺粉丝': note_info.get('店铺粉丝'),
+                    '笔记分享链接': note_info.get('笔记分享链接')
                 })
                 # 采集了多少条
                 gr_total = (page-1)*page_size + len(gather_note)
@@ -207,20 +163,19 @@ def on_message_note(ws, option):
                     is_end = True
 
             # 返回
-            print('===========返回关键词搜索列表页=====')
+            print('===========返回=====')
             time.sleep(0.2)
-            # if note_info.get('类型') == 'video':
-            #     Selector(2).desc("返回").type("ImageView").click().find()
-            # else:
-            #     Selector(2).type("ImageView").click().find()
-            action.Key.back()
-            time.sleep(0.5)
+            if note_info.get('类型') == 'video':
+                Selector(2).desc("返回").type("ImageView").click().find()
+            else:
+                Selector(2).type("ImageView").click().find()
+            time.sleep(0.2)
             if is_note_detail_page():
                 action.Key.back()
-                time.sleep(0.5)
+                time.sleep(0.2)
                 if is_note_detail_page():
                     action.Key.back()
-                    time.sleep(0.5)
+                    time.sleep(0.2)
 
 
             if is_jump:
@@ -265,7 +220,7 @@ def on_message_note(ws, option):
     print('func_phone_xhs_note_data')
     pass
 
-def get_note_info(note_info=None,is_shop=False):
+def get_note_info(note_info=None):
     """
     获取笔记详情  两种情况 1.笔记  2.视频
     :return:
@@ -332,14 +287,8 @@ def get_note_info(note_info=None,is_shop=False):
                 note_info['评论数'] = a[1].desc.replace(' ', '').replace('评论', '')
                 note_info['收藏数'] = a[2].desc.replace(' ', '').replace('收藏', '')
         else:
-            try:
-                note_info['标题'] = run_sel_s(lambda :Selector(2).type("TextView").drawingOrder(5).find(),2).text
-            except:
-                note_info['标题'] = ''
-            try:
-                note_info['内容'] = Selector(2).type("TextView").drawingOrder(6).find().text
-            except:
-                note_info['内容'] = ''
+            note_info['标题'] = run_sel_s(lambda :Selector(2).path("/FrameLayout/TextView").drawingOrder(5).find(),2).text
+            note_info['内容'] = run_sel_s(lambda :Selector(2).path("/FrameLayout/TextView").drawingOrder(6).find(),2).text
 
             if '评论数' not in note_info:
                 a = run_sel_s(lambda: Selector(2).type("Button").find_all(), 2)
@@ -347,103 +296,11 @@ def get_note_info(note_info=None,is_shop=False):
                 note_info['点赞数'] = a[0].desc.replace(' ', '').replace('点赞', '')
                 note_info['收藏数'] = a[1].desc.replace(' ', '').replace('收藏', '')
                 note_info['评论数'] = a[2].desc.replace(' ', '').replace('评论', '')
-        # ===============获取作者主页信息================
-        if is_shop:
-            # 点击用户名称进入用户主页
-            if is_video:
-                Selector(2).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("Button").clickable(
-                    True).click().find()
-            else:
-                Selector(3).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("LinearLayout").clickable(True).click().find()
-            note_info = get_user_info(note_info)
-            # ===============获取店铺信息================
-            if is_shop and note_info['是否有店铺'] == '有':
-                # 进入作者店铺内
-                Selector(2).text("店铺").type("TextView").parent(1).click().find()
-                note_info = get_shop_info(note_info)
-                # 返回用户信息页
-                print('===========返回用户信息页=====')
-                Selector(2).type("ImageView").click().find()
-                time.sleep(0.5)
-                if is_shop_detail_page():
-                    action.Key.back()
-                    time.sleep(0.5)
-                    if is_shop_detail_page():
-                        action.Key.back()
-                        time.sleep(0.5)
-            # 返回笔记详情页
-            print('===========返回笔记详情页=====')
-            time.sleep(0.2)
-            Selector(2).desc("返回").type("ImageView").click().find()
-            time.sleep(0.5)
-            if not is_note_detail_page():   # 不是笔记详情页 就再来一次
-                action.Key.back()
-                time.sleep(0.2)
-                if is_user_detail_page():
-                    action.Key.back()
-                    time.sleep(0.2)
 
     except Exception as e:
         print('异常 note ++++++++++++++++++++++++++')
         print(traceback.format_exc())
 
-    return note_info
-
-def get_user_info(note_info=None):
-    """
-    获取作者主页信息
-    Selector(2).type("TextView").path("/FrameLayout/ViewGroup/LinearLayout/TextView").find()
-    """
-    # 获取用户名称
-    note_info['用户名称'] = run_sel(lambda :Selector(2).type("TextView").find(),4,0.5).text
-    note_info['用户小红书号'] = Selector(2).type("TextView").type("TextView").text("小红书号：.*").find().text.replace('小红书号：', '')
-    try:
-        note_info['用户IP属地'] = Selector(2).text("IP属地：.*").type("TextView").find().text.replace('IP属地：', '')
-    except Exception as e:
-        note_info['用户IP属地'] = ''
-    try:
-        note_info['用户简介'] = Selector(2).type("TextView").path(
-            "/FrameLayout/ViewGroup/LinearLayout/TextView").find().text
-    except Exception as e:
-        note_info['用户简介'] = ''
-    try:
-        note_info['用户性别'] = Selector().path("/FrameLayout/ViewGroup/LinearLayout/LinearLayout/LinearLayout/LinearLayout").find().desc
-    except Exception as e:
-        note_info['用户性别'] = ''
-
-    ffi = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/Button/TextView").find_all(), 3, 0)
-    # 用户关注
-    follows = ffi[0].text if ffi is not None and len(ffi) > 0 else ''
-    # 用户粉丝
-    fans = ffi[2].text if ffi is not None and len(ffi) > 2 else ''
-    # 用户获赞与收藏
-    interaction = ffi[4].text if ffi is not None and len(ffi) > 4 else ''
-
-    note_info['用户关注'] = follows
-    note_info['用户粉丝'] = fans
-    note_info['用户获赞与收藏'] = interaction
-    # note_info['公开收藏笔记'] = Selector(2).type("TextView").find().text
-    # note_info['收藏笔记数量'] = Selector(2).type("TextView").find().text
-    # note_info['收藏专辑数量'] = Selector(2).type("TextView").find().text
-
-    try:
-        if Selector(2).text("店铺").type("TextView").find():
-            note_info['是否有店铺'] = '有'
-        else:
-            note_info['是否有店铺'] = '无'
-    except Exception as e:
-        note_info['是否有店铺'] = '无'
-
-    return note_info
-
-def get_shop_info(note_info=None):
-    """
-    获取店铺信息
-    """
-    note_info['店铺名称'] = run_sel(lambda :Selector(2).type("TextView").path("/FrameLayout/ViewGroup/RecyclerView/FrameLayout/TextView").find(),4,0.5).text
-    note_info['店铺星级'] = Selector(2).type("TextView").path("/FrameLayout/ViewGroup/RecyclerView/FrameLayout/LinearLayout/TextView").find().text
-    note_info['店铺已售'] = Selector(2).text("已售.*").type("TextView").find().text.replace('已售', '')
-    note_info['店铺粉丝'] = Selector(2).text("粉丝.*").type("TextView").find().text.replace('粉丝', '')
     return note_info
 
 def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
@@ -487,30 +344,13 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
 
 def is_note_detail_page():
     try:
-        if Selector(2).desc("点赞.*").type("Button").find():
-            if Selector(2).desc("收藏.*").type("Button").find():
-                if Selector(2).desc("评论.*").type("Button").find():
-                    return True
-        return False
-    except:
-        return False
+        if Selector(2).text("关注").type("TextView").find():
+            if Selector(2).text("作者").type("TextView").find():
+                return True
+        if Selector(2).desc("作者.*").type("Button").find():
+            if Selector(2).text("关注").type("Button").find():
+                return True
 
-def is_user_detail_page():
-    try:
-        if Selector(2).text("小红书号：.*").type("TextView").find():
-            if Selector(2).text("私信").type("TextView").find():
-                time.sleep(0.5)
-                if Selector(2).text("小红书号：.*").type("TextView").find():
-                    if Selector(2).text("私信").type("TextView").find():
-                        return True
-        return False
-    except:
-        return False
-
-def is_shop_detail_page():
-    try:
-        if Selector(2).text("销量").type("TextView").find() and Selector(2).text("价格").type("TextView").find():
-            return True
         return False
     except:
         return False

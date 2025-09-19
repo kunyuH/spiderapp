@@ -7,6 +7,7 @@ from ascript.android.ui import FloatWindow
 from ascript.android.ui import Dialog
 from ascript.android.system import Device
 
+from ..service.xhs.dm import on_message_dm
 from ..service.global_context import GCT
 from ..service.xhs.note import on_message_note
 from ..service.hoo_sock import HooSock
@@ -46,10 +47,12 @@ def tunnel(k,v=None):
             app_uuid = resobj.get('app_uuid')
 
             def on_message(ws, type, option):
-                if type == 'xhs_gather_note':
+                if type == 'xhs_gather_note':   # 关键词采集笔记
                     on_message_note(ws, option)
-                if type == 'xhs_gather_comment':
+                elif type == 'xhs_gather_comment':    # 帖子id 采集评论
                     on_message_content(ws, option)
+                elif type == 'xhs_dm_comment':          # 帖子user id 私信
+                    on_message_dm(ws, option)
                 elif type == 'end':
                     off()
                     print('===============================================')

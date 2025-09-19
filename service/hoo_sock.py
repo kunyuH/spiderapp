@@ -26,15 +26,15 @@ class HooSock:
         if GCT().get('Websocket') is None:
 
             def on_message(ws, message):
-                print("=====：%s" % message)
                 if message == '__ping__':
                     ws.send('__pong__')
-                    print('__pong__')
+                    # print('__pong__')
                 elif message == "__server_shutdown__":
                     print("服务端关闭了，客户端准备断开")
                     ws.close()
                     return
                 else:
+                    print("=====：%s" % message)
                     try:
                         # print("####### on_message #######")
                         # print("message：%s" % message)
