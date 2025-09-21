@@ -7,6 +7,7 @@ from ascript.android.ui import FloatWindow
 from ascript.android.ui import Dialog
 from ascript.android.system import Device
 
+from ..service.dy.phone_gather import on_message_op
 from ..service.xhs.dm import on_message_dm
 from ..service.global_context import GCT
 from ..service.xhs.note import on_message_note
@@ -49,10 +50,12 @@ def tunnel(k,v=None):
             def on_message(ws, type, option):
                 if type == 'xhs_gather_note':   # 关键词采集笔记
                     on_message_note(ws, option)
-                elif type == 'xhs_gather_comment':    # 帖子id 采集评论
+                elif type == 'xhs_gather_comment':       # 帖子id 采集评论
                     on_message_content(ws, option)
                 elif type == 'xhs_dm_comment':          # 帖子user id 私信
                     on_message_dm(ws, option)
+                elif type == 'dy_yy_phone_gather_by_phone_device':  # 定制-快手运营-店铺手机号采集
+                    on_message_op(ws, option)
                 elif type == 'end':
                     off()
                     print('===============================================')

@@ -100,7 +100,8 @@ def on_message_note(ws, option):
             if idx > 1:
                 re_time = 0.2
             # 获取笔记标题
-            note_title = run_sel_s(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, re_time)
+            # note_title = run_sel_s(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, re_time)
+            note_title = run_sel_s(lambda :note.find(Selector(3).path("/RelativeLayout/TextView")).text, re_time)
             if note_title is None:
                 continue
 
@@ -155,10 +156,14 @@ def on_message_note(ws, option):
             time.sleep(0.5)
             # 获取笔记详情  两种情况 1.笔记  2.视频
             # 获取笔记
+            t1 = time.time()
             note_info = get_note_info(note_info,is_shop)
             print('======note_info=====')
             # print(note_info)
+
             note_id = note_info.get('笔记ID')
+            t2 = time.time()
+            print(f"a耗时：{t2 - t1}")
             # print(note_id)
             # print(all_note)
             # print(note_id not in all_note)
@@ -205,7 +210,8 @@ def on_message_note(ws, option):
                     out_info(ws, f'已经采集到 {gr_total} 条笔记， 【{keyword}】采集完成')
                     is_jump = True
                     is_end = True
-
+            t3 = time.time()
+            print(f"b耗时：{t3 - t2}")
             # 返回
             print('===========返回关键词搜索列表页=====')
             time.sleep(0.2)
@@ -214,15 +220,23 @@ def on_message_note(ws, option):
             # else:
             #     Selector(2).type("ImageView").click().find()
             action.Key.back()
-            time.sleep(0.5)
+            time.sleep(0.2)
+            t4 = time.time()
+            print(f"c耗时：{t4 - t3}")
             if is_note_detail_page():
+                t5 = time.time()
+                print(f"d耗时：{t5 - t4}")
                 action.Key.back()
                 time.sleep(0.5)
                 if is_note_detail_page():
+                    t6 = time.time()
+                    print(f"e耗时：{t6 - t5}")
                     action.Key.back()
                     time.sleep(0.5)
 
 
+            t7 = time.time()
+            print(f"f耗时：{t7 - t4}")
             if is_jump:
                 off()
                 break
@@ -270,22 +284,29 @@ def get_note_info(note_info=None,is_shop=False):
     获取笔记详情  两种情况 1.笔记  2.视频
     :return:
     """
+    t1 = time.time()
     # 确认详情页已经加载
-    run_sel(lambda :Selector(2).desc("点赞.*").type("Button").find(),4,0.1)
+    run_sel_s(lambda :Selector(2).desc("点赞.*").type("Button").find(),4)
 
     is_video = False
     # 确认是笔记 还是 视频
     if Selector(2).desc("暂停").type("ViewGroup").find():
         is_video = True
 
+    t2 = time.time()
+    print(f"aa耗时：{t2 - t1}")
     # ================获取分享的笔记链接================
     if is_video:
         Selector(2).type("Button").desc("分享.*").click().find()
     else:
         Selector(2).type("ImageView").drawingOrder(2).click().find()
-    run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
+    run_sel_s(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4)
+    t22 = time.time()
+    print(f"aba耗时：{t22 - t2}")
     share_url_str = Clipboard.get()
     share_url = getUrl(share_url_str)
+    t3 = time.time()
+    print(f"ab耗时：{t3 - t22}")
     print('========点击复制后==========')
     print(share_url)
     if share_url is None:
@@ -296,10 +317,22 @@ def get_note_info(note_info=None,is_shop=False):
         run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
         share_url_str = Clipboard.get()
         share_url = getUrl(share_url_str)
-
+    t4 = time.time()
+    print(f"ac耗时：{t4 - t3}")
+    if share_url is None:
+        time.sleep(1)
+        if is_video:
+            Selector(2).type("Button").desc("分享.*").click().find()
+        else:
+            Selector(2).type("ImageView").drawingOrder(2).click().find()
+        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
+        share_url_str = Clipboard.get()
+        share_url = getUrl(share_url_str)
+    t5 = time.time()
+    print(f"ad耗时：{t5 - t4}")
     print(share_url)
     if share_url is None:
-        exit()
+        raise Exception('没有分享的链接')
     # 分享链接转实际链接
     url = share_url
     if 'xhslink' in share_url:
@@ -311,7 +344,8 @@ def get_note_info(note_info=None,is_shop=False):
     note_info['笔记分享链接'] = share_url
     note_info['笔记ID'] = getNoteIdByUrl(url)
     note_info['笔记链接'] = url
-
+    t6 = time.time()
+    print(f"ae耗时：{t6 - t5}")
     try:
         # ===============获取作者昵称================
         if '用户名称' not in note_info:
@@ -324,16 +358,20 @@ def get_note_info(note_info=None,is_shop=False):
         # ===============获取笔记发布时间================
         # ===============获取笔记发布地点================
         # ===============获取笔记点赞 收藏 评论 数================
+        t7 = time.time()
+        print(f"af耗时：{t7 - t6}")
         if is_video:
             note_info['内容'] = run_sel_s(lambda :Selector(2).id("com.xingin.xhs:id/noteContentText").find(),2).desc
             if '评论数' not in note_info:
-                a = run_sel_s(lambda: Selector(2).type("LinearLayout").drawingOrder(3).child().find_all(), 2)
-                note_info['点赞数'] = a[0].desc.replace(' ', '').replace('点赞', '')
-                note_info['评论数'] = a[1].desc.replace(' ', '').replace('评论', '')
-                note_info['收藏数'] = a[2].desc.replace(' ', '').replace('收藏', '')
+                note_info['点赞数'] = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
+                                                2).desc.replace(' ', '').replace('点赞', '')
+                note_info['收藏数'] = Selector(2).type("Button").desc('收藏.*').find().desc.replace(' ', '').replace(
+                    '收藏', '')
+                note_info['评论数'] = Selector(2).type("Button").desc('评论.*').find().desc.replace(' ', '').replace(
+                    '评论', '')
         else:
             try:
-                note_info['标题'] = run_sel_s(lambda :Selector(2).type("TextView").drawingOrder(5).find(),2).text
+                note_info['标题'] = Selector(2).type("TextView").drawingOrder(5).find().text
             except:
                 note_info['标题'] = ''
             try:
@@ -342,12 +380,15 @@ def get_note_info(note_info=None,is_shop=False):
                 note_info['内容'] = ''
 
             if '评论数' not in note_info:
-                a = run_sel_s(lambda: Selector(2).type("Button").find_all(), 2)
-
-                note_info['点赞数'] = a[0].desc.replace(' ', '').replace('点赞', '')
-                note_info['收藏数'] = a[1].desc.replace(' ', '').replace('收藏', '')
-                note_info['评论数'] = a[2].desc.replace(' ', '').replace('评论', '')
+                note_info['点赞数'] = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
+                                                2).desc.replace(' ', '').replace('点赞', '')
+                note_info['收藏数'] = Selector(2).type("Button").desc('收藏.*').find().desc.replace(' ', '').replace(
+                    '收藏', '')
+                note_info['评论数'] = Selector(2).type("Button").desc('评论.*').find().desc.replace(' ', '').replace(
+                    '评论', '')
         # ===============获取作者主页信息================
+        t8 = time.time()
+        print(f"ag耗时：{t8 - t7}")
         if is_shop:
             # 点击用户名称进入用户主页
             if is_video:
@@ -364,7 +405,7 @@ def get_note_info(note_info=None,is_shop=False):
                 # 返回用户信息页
                 print('===========返回用户信息页=====')
                 Selector(2).type("ImageView").click().find()
-                time.sleep(0.5)
+                time.sleep(0.2)
                 if is_shop_detail_page():
                     action.Key.back()
                     time.sleep(0.5)
@@ -374,15 +415,25 @@ def get_note_info(note_info=None,is_shop=False):
             # 返回笔记详情页
             print('===========返回笔记详情页=====')
             time.sleep(0.2)
-            Selector(2).desc("返回").type("ImageView").click().find()
-            time.sleep(0.5)
-            if not is_note_detail_page():   # 不是笔记详情页 就再来一次
-                action.Key.back()
-                time.sleep(0.2)
-                if is_user_detail_page():
-                    action.Key.back()
-                    time.sleep(0.2)
-
+            # Selector(2).desc("返回").type("ImageView").click().find()
+            action.Key.back()
+            time.sleep(0.2)
+            # print(not is_note_detail_page())
+            # if not is_note_detail_page():   # 不是笔记详情页 就再来一次
+            #     action.Key.back()
+            #     time.sleep(0.2)
+            #     if is_user_detail_page():
+            #         action.Key.back()
+            #         time.sleep(0.2)
+            # else:
+            #     time.sleep(0.2)
+            #     if not is_note_detail_page():   # 不是笔记详情页 就再来一次
+            #         action.Key.back()
+            #         time.sleep(0.2)
+            #         if is_user_detail_page():
+            #             action.Key.back()
+            #             time.sleep(0.2)
+            # exit()
     except Exception as e:
         print('异常 note ++++++++++++++++++++++++++')
         print(traceback.format_exc())
@@ -395,8 +446,8 @@ def get_user_info(note_info=None):
     Selector(2).type("TextView").path("/FrameLayout/ViewGroup/LinearLayout/TextView").find()
     """
     # 获取用户名称
-    note_info['用户名称'] = run_sel(lambda :Selector(2).type("TextView").find(),4,0.5).text
-    note_info['用户小红书号'] = Selector(2).type("TextView").type("TextView").text("小红书号：.*").find().text.replace('小红书号：', '')
+    note_info['用户名称'] = run_sel_s(lambda :Selector(2).type("TextView").find(),4).text
+    note_info['用户小红书号'] = run_sel_s(lambda :Selector(2).type("TextView").text("小红书号：.*").find(),2).text.replace('小红书号：', '')
     try:
         note_info['用户IP属地'] = Selector(2).text("IP属地：.*").type("TextView").find().text.replace('IP属地：', '')
     except Exception as e:
