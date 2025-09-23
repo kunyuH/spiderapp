@@ -15,7 +15,7 @@ from ascript.android.system import Device
 
 from ..global_context import GCT
 from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, send, \
-    out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl, t_sleep, run_sel_s
+    out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl, t_sleep, run_sel_s,out_error
 
 
 def on_message_op(ws, option):
@@ -72,6 +72,7 @@ def on_message_op(ws, option):
                 break
 
             print('=====用户项=======')
+
             t1 = time.time()
 
             # 第二次迭代开始 就是能取到则 取 不能取到就跳过  用于加快速度
@@ -79,16 +80,22 @@ def on_message_op(ws, option):
             if idx > 1:
                 re_time = 0.5
             # 获取用户信息 （包含标题，粉丝，主体）
-            text_str = run_sel_s(lambda :user.find(Selector(2).type('LynxFlattenUI').clickable(False)).text, re_time)
+            # text_str = run_sel_s(lambda :user.find(Selector(2).type('LynxFlattenUI').clickable(False)).text, re_time)
+            text_str = run_sel_s(lambda :user.find(Selector(2).text("粉丝: .*")).text, re_time)
             print(text_str)
-
             if text_str is None:
+                if is_user_page():
+                    # 在用户详情页  则 返回一下
+                    action.Key.back()
+                    time.sleep(1)
                 continue
+            # 标点符号兼容 有的系统是英文标点符号
+            text_str = text_str.replace('，', ',')
             # 按照逗号分割
-            text_strs = text_str.split('，')
+            text_strs = text_str.split(',')
             user_name = text_strs[0]
             user_fans = text_strs[1].replace('粉丝:', '')
-            user_main = text_strs[2]    # 账号公司 或 抖音号
+            user_main = text_strs[2].replace(' 按钮','')    # 账号公司 或 抖音号
             t2 = time.time()
             print(f"耗时：{t2-t1}")
 
@@ -108,28 +115,20 @@ def on_message_op(ws, option):
 
             # 点击用户 [根据定位 点击  元素点击不生效]
             time.sleep(0.2)
-            item_rect = user.find(Selector(2).path('/FrameLayout/LynxFlattenUI')).rect
-            action.Touch.down(item_rect.left+300, item_rect.top+50, 20)
+            item_rect = user.rect
+            action.Touch.down(item_rect.right/2, item_rect.top+50, 20)
             time.sleep(0.2)
-            action.Touch.up(item_rect.left+300, item_rect.top+50,  20)
+            action.Touch.up(item_rect.right/2, item_rect.top+50,  20)
             time.sleep(0.5)
             # 确认是否在用户页
             if not is_user_page():
                 continue
-                exit()
-                # 点击用户 [根据定位 点击  元素点击不生效]
-                time.sleep(0.2)
-                item_rect = user.find(Selector(2).path('/FrameLayout/LynxFlattenUI')).rect
-                action.Touch.down(item_rect.left + 300, item_rect.top + 50, 20)
-                time.sleep(0.2)
-                action.Touch.up(item_rect.left + 300, item_rect.top + 50, 20)
-                time.sleep(0.5)
 
             data_keys.append(data_key)
             # 获取用户详情
             print('==开始采集用户信息==')
             user_info = {**user_info,**get_user_info()}
-            print('======note_info=====')
+            print('======user_info=====')
 
             gather_user.append(user_info)
             # 采集了多少条
@@ -151,11 +150,15 @@ def on_message_op(ws, option):
             print('===========返回关键词搜索列表页=====')
             time.sleep(0.4)
             if not is_user_page():
-                exit()
-            # if note_info.get('类型') == 'video':
-            #     Selector(2).desc("返回").type("ImageView").click().find()
-            # else:
-            #     Selector(2).type("ImageView").click().find()
+                if is_user_phone_page():
+                    action.Key.back()
+                    time.sleep(0.2)
+
+            if not is_user_page():
+                out_error(ws,f'返回关键词搜索列表页失败,跳过【{keyword}】采集')
+                off()
+                is_end = True
+                break
             action.Key.back()
 
             if is_jump:
@@ -165,6 +168,13 @@ def on_message_op(ws, option):
         GCT().set('data_keys', data_keys)
         # 往下滑动
         print('======滑动======')
+        if is_user_page():
+            action.Key.back()
+            time.sleep(1)
+        if is_user_page():
+            action.Key.back()
+            time.sleep(1)
+
         # 滑动
         display = Device.display()
         width = display.widthPixels
@@ -211,34 +221,34 @@ def get_user_info()->Dict:
         # 获取用户名称
         # 获取用户账号主体
         # 获赞
-        user_info['获赞'] = run_sel_s(lambda :Selector(2).type("TextView").text("获赞").brother(1).find(),2).text.strip()
+        user_info['获赞'] = run_sel_s(lambda :Selector(2).id("com.ss.android.ugc.aweme:id/ddp").find(),2).text.strip()
         if user_info['获赞'] == '':
             time.sleep(0.1)
-            user_info['获赞'] = run_sel_s(lambda: Selector(2).type("TextView").text("获赞").brother(1).find(), 2).text.strip()
+            user_info['获赞'] = run_sel_s(lambda: Selector(2).id("com.ss.android.ugc.aweme:id/ddp").find(), 2).text.strip()
         if user_info['获赞'] == '':
             time.sleep(0.1)
-            user_info['获赞'] = run_sel_s(lambda: Selector(2).type("TextView").text("获赞").brother(1).find(), 2).text.strip()
+            user_info['获赞'] = run_sel_s(lambda: Selector(2).id("com.ss.android.ugc.aweme:id/ddp").find(), 2).text.strip()
         if user_info['获赞'] == '':
             time.sleep(0.2)
-            user_info['获赞'] = run_sel_s(lambda: Selector(2).type("TextView").text("获赞").brother(1).find(), 2).text.strip()
+            user_info['获赞'] = run_sel_s(lambda: Selector(2).id("com.ss.android.ugc.aweme:id/ddp").find(), 2).text.strip()
         # 关注
-        user_info['关注'] = Selector(2).type("TextView").text("关注").brother(1).find().text
+        user_info['关注'] = Selector(2).id("com.ss.android.ugc.aweme:id/e-t").find().text
         # 粉丝
-        user_info['粉丝'] = Selector(2).type("TextView").text("粉丝").brother(1).find().text
+        user_info['粉丝'] = Selector(2).id("com.ss.android.ugc.aweme:id/e-k").find().text
     except:
         user_info['获赞'] = ''
         user_info['关注'] = ''
         user_info['粉丝'] = ''
     # 简介
     try:
-        user_info['简介'] = Selector(2).path("/FrameLayout/LinearLayout/TextView").clickable(False).find().text
+        user_info['简介'] = Selector(2).id("com.ss.android.ugc.aweme:id/rhb").find().text
 
         # 规则：
         # - 先找 "："
         """
         ： → 匹配中文冒号后面的内容
         [a-zA-Z] → 以字母开头（不能是数字、@ 或其他符号）
-        [a-zA-Z0-9_-]{3,} → 后面至少 3 个字符，允许字母、数字、下划线、短横线
+        [a-zA-Z0-9_-]{5,19} → 后面 5到19 个字符，允许字母、数字、下划线、短横线
         整体保证不会把 🎵號=💚 这种带中文或特殊符号的东西抓出来
         """
         pattern = re.compile(r'：([a-zA-Z][-_a-zA-Z0-9]{5,19})')
@@ -254,15 +264,42 @@ def get_user_info()->Dict:
 
     # ip
     try:
-        user_info['IP'] = Selector(2).type("FrameLayout").desc("IP：.*").find().desc.replace('IP：', '')
+        user_info['IP'] = Selector(2).desc("IP.*").find().desc.replace('IP', '').replace('属地', '').replace('：', '')
     except:
-        user_info['IP'] = ''
+        try:
+            user_info['IP'] = Selector(2).text("IP.*").find().text.replace('IP', '').replace('属地', '').replace('：',                                                                                              '')
+        except:
+            user_info['IP'] = ''
+    # 性别
+    try:
+        user_info['性别'] = Selector(2).text("女·").find().text.split('·')[0]
+    except:
+        try:
+            user_info['性别'] = Selector(2).text("女").maxTextLength(1).find().text
+        except:
+            try:
+                user_info['性别'] = Selector(2).text("男·").find().text.split('·')[0]
+            except:
+                try:
+                    user_info['性别'] = Selector(2).text("男").maxTextLength(1).find().text
+                except:
+                    user_info['性别'] = ''
+
     # 电话
     if Selector(2).text("\[label\] 联系.*").type("TextView").parent(1).find():
         # 点击
         Selector(2).text("\[label\] 联系.*").type("TextView").parent(1).click().find()
         try:
             user_info["手机号"] = run_sel_s(lambda :Selector(2).text("呼叫 .*").find(),2).text.replace('呼叫 ', '')
+            time.sleep(0.2)
+            action.Key.back()
+        except:
+            user_info["手机号"] = ""
+    elif Selector(2).text("\[label\] 官方电话").type("TextView").parent(1).find():
+        # 点击
+        Selector(2).text("\[label\] 官方电话").type("TextView").parent(1).click().find()
+        try:
+            user_info["手机号"] = run_sel_s(lambda: Selector(2).text("呼叫 .*").find(), 2).text.replace('呼叫 ', '')
             time.sleep(0.2)
             action.Key.back()
         except:
@@ -281,7 +318,18 @@ def is_keyword_user_page():
         return False
 
 def is_user_page():
+    """
+    判断是否是用户主页
+    """
     if Selector(2).desc("用户头像").find():
+        return True
+    return False
+
+def is_user_phone_page():
+    """
+    判断是否是用户手机号页面
+    """
+    if Selector(2).text("呼叫 .*").find():
         return True
     return False
 
