@@ -97,7 +97,7 @@ def on_message_op(ws, option):
             user_fans = text_strs[1].replace('粉丝:', '')
             user_main = text_strs[2].replace(' 按钮','')    # 账号公司 或 抖音号
             t2 = time.time()
-            print(f"耗时：{t2-t1}")
+            print(f"a耗时：{t2-t1}")
 
             data_key = hashlib.md5(f"{user_name}{user_main}".encode('utf-8')).hexdigest()
             print(f"{user_name}-{user_main}")
@@ -125,10 +125,14 @@ def on_message_op(ws, option):
                 continue
 
             data_keys.append(data_key)
+            t3 = time.time()
+            print(f"b耗时：{t3 - t2}")
             # 获取用户详情
             print('==开始采集用户信息==')
             user_info = {**user_info,**get_user_info()}
             print('======user_info=====')
+            t4 = time.time()
+            print(f"c耗时：{t4 - t3}")
 
             gather_user.append(user_info)
             # 采集了多少条
@@ -241,7 +245,7 @@ def get_user_info()->Dict:
         user_info['粉丝'] = ''
     # 简介
     try:
-        user_info['简介'] = Selector(2).id("com.ss.android.ugc.aweme:id/rhb").find().text
+        user_info['简介'] = Selector(2).path("/FrameLayout/LinearLayout/TextView").find().text
 
         # 规则：
         # - 先找 "："
