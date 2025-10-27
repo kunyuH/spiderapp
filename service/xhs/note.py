@@ -339,11 +339,11 @@ def get_note_info(note_info=None,is_shop=False):
         url = getLinkToNoteUrl(option={
             'url': share_url
         })
-
-    note_info['类型'] = 'video' if is_video else 'normal'
     note_info['笔记分享链接'] = share_url
     note_info['笔记ID'] = getNoteIdByUrl(url)
     note_info['笔记链接'] = url
+
+    note_info['类型'] = 'video' if is_video else 'normal'
     t6 = time.time()
     print(f"ae耗时：{t6 - t5}")
     try:
