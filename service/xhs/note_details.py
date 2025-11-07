@@ -40,14 +40,19 @@ def on_message_note(ws, option):
 
     # 进行点赞
     if op == 'like':
+        new_like  = False
+        # todo 确认是否已经点赞
+
         run_sel(lambda: Selector(2).type("Button").desc("点赞.*").find()).click()
         out_success(ws, f"点赞成功")
 
-    send(ws, 'func_phone_xhs_note_like', {
-        'data': gather_note,
-        'is_end': is_end
-    })
-    print('func_phone_xhs_note_data')
+        send(ws, 'func_phone_xhs_note_like', {
+            'data': {
+                'new_like':new_like
+            },
+        })
+
+    print('func_phone_xhs_note')
     pass
 
 
