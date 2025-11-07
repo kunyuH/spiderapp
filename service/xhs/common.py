@@ -1,8 +1,8 @@
+import hashlib
 import json
 import re
 import time
 import traceback
-
 from ascript.android.system import R
 from android.content import Intent
 from android.net import Uri
@@ -11,330 +11,291 @@ from ascript.android.system import Clipboard
 from ascript.android import action
 from ascript.android.system import Device
 
-from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, \
-    out_info, out_success, send, run_sel, getUrl, getLinkToNoteUrl
+from ...utils.tools import run_sel, getNoteIdByUrl, getUrl, getLinkToNoteUrl, run_sel_s
 
-
-def ip_date(content):
-    content = content.strip()
-    # 末尾是翻译 则去除
-    if content.endswith("翻译"):
-        content = content[:-2].strip()
-    # 末尾是回复 则去除
-    if content.endswith("回复"):
-        content = content[:-2].strip()
-
-    # 我的美食，还 有 昨日 12:50 北京
-    # 我的美食，还 有 昨日 12:50
-    # 我的美食，还 有 12:50 北京
-    # 我的美食，还 有 12:50
-    # 好心疼这些土地啊， 11小时前 江苏
-
-    # 时间模式
-    time_pattern = (
-         r"(?:"
-        r"(?:刚刚|刚才|今天|昨天|昨日|前天)(?:\s+\d{1,2}:\d{2})?"  # 相对时间 + 可选 HH:MM
-        r"|\d+分钟前|\d+小时前|\d+天前"                               # 数字时间
-        r"|\d{1,2}:\d{2}"                                           # HH:MM
-        r"|\d{2}-\d{2}"                                             # MM-DD
-        r"|\d{4}-\d{2}-\d{2}"                                       # YYYY-MM-DD
-        r")"
-    )
-
-    # 完整正则：评论 + 空格 + 时间 + 可选空格 + 可选IP(中文) + 结尾
-    # pattern = re.compile(rf"(.*?)\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?$")
-    # pattern = re.compile(rf"^(.*?)(?:\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
-    pattern = re.compile(rf"^(.*?)(?:\s*({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
-
-    # pattern = re.compile(rf"^(.*?)(?:\s+({time_pattern})(?:\s+([\u4e00-\u9fa5]+))?)?$")
-
-    match = pattern.match(content)
-    # 如果只分出来两个 则
-    if match:
-        comment = match.group(1).strip() or None
-        time_text = match.group(2).strip() if match.group(2) else None
-        ip_text = match.group(3).strip() if match.group(3) else None
-    else:
-        # 如果末尾没有时间，则全部视为评论
-        comment = content
-        time_text = None
-        ip_text = None
-
-    # print(f"原始: {content}")
-    # print(f"时间: {time_text}, IP属地: {ip_text}")
-    # print(f"内容: {comment}")
-    # print("-" * 30)
-    return time_text, ip_text, comment
-
-def content_filter(content_data,fiter_data):
+def get_note_info(note_info=None,is_shop=False):
     """
-    # 数据过滤
-    # 1. 首个时间不满足 则直接退出采集
-    # 2. 时间过滤
-    # 3. 关键词过滤 （排除关键词  符合关键词  ）
-    # 4. 评论人昵称过滤
-    # 5. 评论ip关键词
-    # 6. 评论字数
-    ## 7. 评论去重  这个做不了  不知道uid
-    :param content:
+    获取笔记详情  两种情况 1.笔记  2.视频
     :return:
     """
-    comment_search_keyword = fiter_data.get('comment_search_keyword')
-    comment_not_search_keyword = fiter_data.get('comment_not_search_keyword')
-    comment_not_user_name = fiter_data.get('comment_not_user_name')
-    comment_ip_search = fiter_data.get('comment_ip_search')
-    follow_time = fiter_data.get('follow_time','')
-    comment_word_num = fiter_data.get('comment_word_num')
+    t1 = time.time()
+    # 确认详情页已经加载
+    run_sel_s(lambda :Selector(2).desc("点赞.*").type("Button").find(),4)
 
-    content = content_data.get('content')
-    nickname = content_data.get('user_info',{}).get('nickname')
-    create_time = content_data.get('create_time')
-    ip_location = content_data.get('ip_location')
+    is_video = False
+    # 确认是笔记 还是 视频
+    if Selector(2).desc("暂停").type("ViewGroup").find():
+        is_video = True
 
-    # 包含搜索关键词
-    if(comment_search_keyword == '' or re.findall(comment_search_keyword, content)
-        and (comment_ip_search == '' or re.findall(comment_ip_search, ip_location))
-        # 评论时间要大于上次扫描时间 小于 本次扫描时间
-        and (follow_time == '' or create_time >= follow_time)
-        # 排除搜索关键词
-        and (comment_not_search_keyword == '' or re.findall(comment_not_search_keyword, content) == [])
-        # 评论人昵称屏蔽
-        and (comment_not_user_name == '' or re.findall(comment_not_user_name, nickname) == [])
-        and comment_word_num > len(content)):
-        return content_data
-    return None
-
-def on_message_content(ws, option):
-    # print(option)
-    on()
-    note_id = option.get('note_id')
-    maxPage = option.get('maxPage')
-    follow_time = option.get('follow_time')  # 评论时间 限制
-    comment_search_keyword = option.get('comment_search_keyword')  # 评论关键词
-    comment_not_search_keyword = option.get('comment_not_search_keyword')  # 评论搜索排除关键字
-    comment_not_user_name = option.get('comment_not_user_name')  # 评论人昵称排除关键字
-    comment_ip_search = option.get('comment_ip_search')  # 评论ip搜索关键字
-    comment_word_num = option.get('comment_word_num')  # 评论字数小于
-
-    max_num = maxPage * 10
-    # Selector.cache(False)
-    # 进入这个笔记内
-    uri = Uri.parse(f"xhsdiscover://item/{note_id}")
-    it = Intent(Intent.ACTION_VIEW, uri)
-    it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    R.context.startActivity(it)
-    out_info(ws, f"正在打开笔记 {note_id}")
-
-    gather_comment = []
-
-    # 获取笔记评论量
-    # 有评论  则 点击评论  点击按最新
-    content_button = run_sel(lambda :Selector(2).type("Button").desc("评论.*").find())
-    if content_button:
-        # 去除所有空格
-        content_num = content_button.desc.replace(" ", "").replace("评论", "")
-        # true 没有评论
-        if content_num == '' or content_num == '0' or content_num == 0:
-            out_info(ws, f"笔记 【{note_id}】 没有评论")
+    t2 = time.time()
+    print(f"aa耗时：{t2 - t1}")
+    # ================获取分享的笔记链接================
+    if is_video:
+        Selector(2).type("Button").desc("分享.*").click().find()
+    else:
+        Selector(2).type("ImageView").drawingOrder(2).click().find()
+    run_sel_s(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4)
+    t22 = time.time()
+    print(f"aba耗时：{t22 - t2}")
+    share_url_str = Clipboard.get()
+    share_url = getUrl(share_url_str)
+    t3 = time.time()
+    print(f"ab耗时：{t3 - t22}")
+    print('========点击复制后==========')
+    print(share_url)
+    if share_url is None:
+        if is_video:
+            Selector(2).type("Button").desc("分享.*").click().find()
         else:
-            out_info(ws, f"笔记 【{note_id}】 评论量：{content_num}")
+            Selector(2).type("ImageView").drawingOrder(2).click().find()
+        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
+        share_url_str = Clipboard.get()
+        share_url = getUrl(share_url_str)
+    t4 = time.time()
+    print(f"ac耗时：{t4 - t3}")
+    if share_url is None:
+        time.sleep(1)
+        if is_video:
+            Selector(2).type("Button").desc("分享.*").click().find()
+        else:
+            Selector(2).type("ImageView").drawingOrder(2).click().find()
+        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
+        share_url_str = Clipboard.get()
+        share_url = getUrl(share_url_str)
+    t5 = time.time()
+    print(f"ad耗时：{t5 - t4}")
+    print(share_url)
+    if share_url is None:
+        raise Exception('没有分享的链接')
+    # 分享链接转实际链接
+    url = share_url
+    if 'xhslink' in share_url:
+        url = getLinkToNoteUrl(option={
+            'url': share_url
+        })
 
-            # 点击评论
-            run_sel(lambda :content_button.find(Selector(2).click()))
+    note_info['类型'] = 'video' if is_video else 'normal'
+    note_info['笔记分享链接'] = share_url
+    note_info['笔记ID'] = getNoteIdByUrl(url)
+    note_info['笔记链接'] = url
+    t6 = time.time()
+    print(f"ae耗时：{t6 - t5}")
+    try:
+        # ===============获取作者昵称================
+        if '用户名称' not in note_info:
+            if is_video:
+                note_info['用户名称'] = run_sel(lambda :Selector(2).path("/FrameLayout/RecyclerView/ViewGroup/LinearLayout/ViewGroup/Button").type("Button").desc("作者.*").find(),4,0.1).desc
+            else:
+                note_info['用户名称'] = run_sel(lambda :Selector(2).type("TextView").find(),4,0.1).text
+        # ===============获取笔记标题================
+        # ===============获取笔记内容================
+        # ===============获取笔记发布时间================
+        # ===============获取笔记发布地点================
+        # ===============获取笔记点赞 收藏 评论 数================
+        t7 = time.time()
+        print(f"af耗时：{t7 - t6}")
+        if is_video:
+            note_info['内容'] = run_sel_s(lambda :Selector(2).id("com.xingin.xhs:id/noteContentText").find(),2).desc
+            if '评论数' not in note_info:
+                note_info['点赞数'] = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
+                                                2).desc.replace(' ', '').replace('点赞', '')
+                note_info['收藏数'] = Selector(2).type("Button").desc('收藏.*').find().desc.replace(' ', '').replace(
+                    '收藏', '')
+                note_info['评论数'] = Selector(2).type("Button").desc('评论.*').find().desc.replace(' ', '').replace(
+                    '评论', '')
+        else:
+            try:
+                note_info['标题'] = Selector(2).type("TextView").drawingOrder(5).find().text
+            except:
+                note_info['标题'] = ''
+            try:
+                note_info['内容'] = Selector(2).type("TextView").drawingOrder(6).find().text
+            except:
+                note_info['内容'] = ''
 
-            # 点击按最新
-            run_sel(lambda :Selector(2).text(".*条评论").type("TextView").click().find(),3)
-            run_sel(lambda: Selector(2).text("按最新").type("TextView").parent(1).click().find(),2)
-            time.sleep(0.5)
+            if '评论数' not in note_info:
+                note_info['点赞数'] = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
+                                                2).desc.replace(' ', '').replace('点赞', '')
+                note_info['收藏数'] = Selector(2).type("Button").desc('收藏.*').find().desc.replace(' ', '').replace(
+                    '收藏', '')
+                note_info['评论数'] = Selector(2).type("Button").desc('评论.*').find().desc.replace(' ', '').replace(
+                    '评论', '')
+        # ===============获取作者主页信息================
+        t8 = time.time()
+        print(f"ag耗时：{t8 - t7}")
+        if is_shop:
+            # 点击用户名称进入用户主页
+            if is_video:
+                Selector(2).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("Button").clickable(
+                    True).click().find()
+            else:
+                Selector(3).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("LinearLayout").clickable(True).click().find()
+            note_info = get_user_info(note_info)
+            # ===============获取店铺信息================
+            if is_shop and note_info['是否有店铺'] == '有':
+                # 进入作者店铺内
+                Selector(2).text("店铺").type("TextView").parent(1).click().find()
+                note_info = get_shop_info(note_info)
+                # 返回用户信息页
+                print('===========返回用户信息页=====')
+                Selector(2).type("ImageView").click().find()
+                time.sleep(0.2)
+                if is_shop_detail_page():
+                    action.Key.back()
+                    time.sleep(0.5)
+                    if is_shop_detail_page():
+                        action.Key.back()
+                        time.sleep(0.5)
+            # 返回笔记详情页
+            print('===========返回笔记详情页=====')
+            time.sleep(0.2)
+            # Selector(2).desc("返回").type("ImageView").click().find()
+            action.Key.back()
+            time.sleep(0.2)
+            # print(not is_note_detail_page())
+            # if not is_note_detail_page():   # 不是笔记详情页 就再来一次
+            #     action.Key.back()
+            #     time.sleep(0.2)
+            #     if is_user_detail_page():
+            #         action.Key.back()
+            #         time.sleep(0.2)
+            # else:
+            #     time.sleep(0.2)
+            #     if not is_note_detail_page():   # 不是笔记详情页 就再来一次
+            #         action.Key.back()
+            #         time.sleep(0.2)
+            #         if is_user_detail_page():
+            #             action.Key.back()
+            #             time.sleep(0.2)
+            # exit()
+    except Exception as e:
+        print('异常 note ++++++++++++++++++++++++++')
+        print(traceback.format_exc())
 
-            is_jump = False
-            num = 0
-            data_keys = []
-            g_num = 0
-            old = 0
-            time_check_num = 0
+    return note_info
 
-            while check_end():
-                # 获取评论项
-                items = run_sel(lambda: Selector(2).type("RecyclerView").child().type("LinearLayout").find_all())
-                if items:
-                    for item in items:
-                        if not item:
-                            continue
-                        num += 1
-                        if num > max_num:
-                            out_info(ws, f"笔记 【{note_id}】 评论已经提取 {max_num} 条")
-                            is_jump = True
-                            break
-                        if not check_end():
-                            is_jump = True
-                            break
-                        try:
-                            usre_name_obj = run_sel(lambda :item.find(Selector().child().type('TextView').drawingOrder(2)),3,0.1)
-                            if not usre_name_obj:
-                                continue
-                            usre_name = usre_name_obj.text
+def get_user_info(note_info=None):
+    """
+    获取作者主页信息
+    Selector(2).type("TextView").path("/FrameLayout/ViewGroup/LinearLayout/TextView").find()
+    """
+    # 获取用户名称
+    note_info['用户名称'] = run_sel_s(lambda :Selector(2).type("TextView").find(),4).text
+    note_info['用户小红书号'] = run_sel_s(lambda :Selector(2).type("TextView").text("小红书号：.*").find(),2).text.replace('小红书号：', '')
+    try:
+        note_info['用户IP属地'] = Selector(2).text("IP属地：.*").type("TextView").find().text.replace('IP属地：', '')
+    except Exception as e:
+        note_info['用户IP属地'] = ''
+    try:
+        note_info['用户简介'] = Selector(2).type("TextView").path(
+            "/FrameLayout/ViewGroup/LinearLayout/TextView").find().text
+    except Exception as e:
+        note_info['用户简介'] = ''
+    try:
+        note_info['用户性别'] = Selector().path("/FrameLayout/ViewGroup/LinearLayout/LinearLayout/LinearLayout/LinearLayout").find().desc
+    except Exception as e:
+        note_info['用户性别'] = ''
 
-                            content = item.find(Selector().child().type('TextView').drawingOrder(4)).text
+    ffi = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/Button/TextView").find_all(), 3, 0)
+    # 用户关注
+    follows = ffi[0].text if ffi is not None and len(ffi) > 0 else ''
+    # 用户粉丝
+    fans = ffi[2].text if ffi is not None and len(ffi) > 2 else ''
+    # 用户获赞与收藏
+    interaction = ffi[4].text if ffi is not None and len(ffi) > 4 else ''
 
-                            # 作者
-                            try:
-                                item.find(Selector().child().text('作者'))
-                                is_author = True
-                            except:
-                                is_author = False
+    note_info['用户关注'] = follows
+    note_info['用户粉丝'] = fans
+    note_info['用户获赞与收藏'] = interaction
+    # note_info['公开收藏笔记'] = Selector(2).type("TextView").find().text
+    # note_info['收藏笔记数量'] = Selector(2).type("TextView").find().text
+    # note_info['收藏专辑数量'] = Selector(2).type("TextView").find().text
 
-                            try:
-                                like = item.find(Selector().child().type('LinearLayout').child().type("TextView")).text
-                            except:
-                                like = 0
-                            print(content)
-                            # 提取时间 ip
-                            create_time,ip_location,content = ip_date(content)
-                            if create_time is None:
-                                date_ip = item.find(Selector().child().type('RelativeLayout').child().type("TextView")).text
-                                create_time, ip_location, _ = ip_date(date_ip)
-                            print(create_time,ip_location,content)
-                            print('------------------')
-                            # ture 如果时间 ip 都没有
-                            if create_time is None and ip_location is None:
-                                date_ip = item.find(Selector().child().type('RelativeLayout').child().type("TextView")).text
-                                # true 如果末尾是翻译 则去除
-                                if date_ip.endswith('翻译'):
-                                    date_ip = date_ip.replace('翻译', '').strip()
-                                create_time, ip_location, _ = ip_date(date_ip)
+    try:
+        if Selector(2).text("店铺").type("TextView").find():
+            note_info['是否有店铺'] = '有'
+        else:
+            note_info['是否有店铺'] = '无'
+    except Exception as e:
+        note_info['是否有店铺'] = '无'
 
-                            usre_name = usre_name if usre_name else ''
-                            content = content if content else ''
-                            like = like if like else 0
-                            create_time = int(date_to_timestamp(parse_chinese_time(create_time))) if create_time else ''
-                            ip_location = ip_location if ip_location else ''
+    return note_info
 
-                            # 先判断时间 只要有一个不合适的 就退出
-                            # 必须校验3（包含）个以上 因为有置顶的 包括置顶的一个子评论
-                            if create_time is None or create_time == '' or create_time < follow_time:
-                                time_check_num += 1
-                                out_info(ws,
-                                         f'{timestamp_to_date(create_time)}----{timestamp_to_date(follow_time)}----{time_check_num}')
-                                if time_check_num > 2:
-                                    out_info(ws, f"笔记 【{note_id}】 评论已经采集完")
-                                    is_jump = True
-                                    break
-                                continue
+def get_shop_info(note_info=None):
+    """
+    获取店铺信息
+    """
+    note_info['店铺名称'] = run_sel(lambda :Selector(2).type("TextView").path("/FrameLayout/ViewGroup/RecyclerView/FrameLayout/TextView").find(),4,0.5).text
+    note_info['店铺星级'] = Selector(2).type("TextView").path("/FrameLayout/ViewGroup/RecyclerView/FrameLayout/LinearLayout/TextView").find().text
+    note_info['店铺已售'] = Selector(2).text("已售.*").type("TextView").find().text.replace('已售', '')
+    note_info['店铺粉丝'] = Selector(2).text("粉丝.*").type("TextView").find().text.replace('粉丝', '')
+    return note_info
 
-                            data_key = f"{usre_name}{content}"
-                            # true 已经抓过了 不再抓取
-                            if data_key in data_keys:
-                                continue
+def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
+    # 点击下拉筛选
+    Selector(2).type("ActionBar\$Tab").click().find()
+    # 排序依据点击
+    if sort_type != 'general':
+        if sort_type == 'time_descending':  # 最新
+            Selector(2).type("TextView").text("最新").parent(1).click().find()
+        elif sort_type == 'popularity_descending':  # 最多点赞
+            Selector(2).type("TextView").text("最多点赞").parent(1).click().find()
+        elif sort_type == 'comment_descending':  # 最多评论
+            Selector(2).type("TextView").text("最多评论").parent(1).click().find()
+        elif sort_type == 'collect_descending':  # 最多收藏
+            Selector(2).type("TextView").text("最多收藏").parent(1).click().find()
+    # 笔记类型点击
+    if filter_note_type != '不限':
+        if filter_note_type == '视频':  # 视频
+            Selector(2).type("TextView").text("视频").parent(1).click().find()
+        elif filter_note_type == '图文':  # 图文
+            Selector(2).type("TextView").text("图文").parent(1).click().find()
+    # 发布时间点击
+    if filter_note_time != '不限':
+        if filter_note_time == '一天内':  # 一天内
+            Selector(2).type("TextView").text("一天内").parent(1).click().find()
+        elif filter_note_time == '一周内':  # 一周内
+            Selector(2).type("TextView").text("一周内").parent(1).click().find()
+        elif filter_note_time == '半年内':  # 半年内
+            Selector(2).type("TextView").text("半年内").parent(1).click().find()
+    # 搜索范围点击
+    if filter_note_range != '不限':
+        if filter_note_range == '已看过':  # 已看过
+            Selector(2).type("TextView").text("已看过").parent(1).click().find()
+        elif filter_note_range == '未看过':  # 未看过
+            Selector(2).type("TextView").text("未看过").parent(1).click().find()
+        elif filter_note_range == '已关注':  # 已关注
+            Selector(2).type("TextView").text("已关注").parent(1).click().find()
 
-                            out_success(ws,
-                                        f"{num}. 【{timestamp_to_date(create_time)}】 【{usre_name}】 评论：{content} 作者：{'是' if is_author else '否'} 点赞：{like} IP属地：{ip_location}")
+    # 点击收起
+    Selector(2).text("收起").type("TextView").parent(1).click().find()
 
-                            content_data = {
-                                # 'usre_name':usre_name,
-                                'id':generate_guid(),
-                                'content':content,
-                                'like_count':like,
-                                'create_time':create_time,
-                                'ip_location':ip_location,
-                                'user_info':{
-                                    'nickname':usre_name
-                                },
-                                'show_tags':['is_author'] if is_author else [],
-                            }
+def is_note_detail_page():
+    try:
+        if Selector(2).desc("点赞.*").type("Button").find():
+            if Selector(2).desc("收藏.*").type("Button").find():
+                if Selector(2).desc("评论.*").type("Button").find():
+                    return True
+        return False
+    except:
+        return False
 
-                            content_data = content_filter(content_data,{
-                                # 'follow_time': follow_time,                               # 评论时间 限制
-                                'comment_search_keyword': comment_search_keyword,           # 评论关键词
-                                'comment_not_search_keyword': comment_not_search_keyword,   # 评论搜索排除关键字
-                                'comment_not_user_name': comment_not_user_name,             # 评论人昵称排除关键字
-                                'comment_ip_search': comment_ip_search,                     # 评论ip搜索关键字
-                                'comment_word_num': comment_word_num,                       # 评论字数小于
-                            })
+def is_user_detail_page():
+    try:
+        if Selector(2).text("小红书号：.*").type("TextView").find():
+            if Selector(2).text("私信").type("TextView").find():
+                time.sleep(0.5)
+                if Selector(2).text("小红书号：.*").type("TextView").find():
+                    if Selector(2).text("私信").type("TextView").find():
+                        return True
+        return False
+    except:
+        return False
 
-                            if content_data is not None:
-
-                                # 获取uid （点击用户名称 进入主页 把链接复制出来 截取里面的uid）
-                                item.find(Selector(2).child().type('TextView').drawingOrder(2).click())
-
-                                # 获取用户主页信息
-                                # 用户小红书号
-                                red_id = run_sel(lambda: Selector().text("小红书号.*").find(),3,0).text.replace('小红书号：', '').strip()
-                                # 用户性别
-                                gen = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/LinearLayout/LinearLayout/LinearLayout").find(),3,0)
-                                gender = gen.desc if gen is not None else ''
-
-                                ffi = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/Button/TextView").find_all(),3,0)
-                                # 用户关注
-                                follows = ffi[0].text if ffi is not None and len(ffi) > 0 else ''
-                                # 用户粉丝
-                                fans = ffi[2].text if ffi is not None and len(ffi) > 2 else ''
-                                # 用户获赞与收藏
-                                interaction = ffi[4].text if ffi is not None and len(ffi) > 4 else ''
-
-                                run_sel(lambda :Selector(2).type("ImageView").desc("更多").click().find())
-                                run_sel(lambda :Selector(2).desc("复制链接").type("Button").child().type("ViewGroup").click().find())
-                                # exit()
-                                user_url = Clipboard.get()
-                                user_url = getUrl(user_url)
-                                if 'xhslink' in user_url:
-                                    user_url = getLinkToNoteUrl(option={
-                                        'url': user_url
-                                    })
-                                content_data['user_info']['red_id'] = red_id
-                                content_data['user_info']['gender'] = gender
-                                content_data['user_info']['follows'] = follows
-                                content_data['user_info']['fans'] = fans
-                                content_data['user_info']['interaction'] = interaction
-                                content_data['user_info']['user_id'] = user_url.split('?')[0].split('/')[-1]
-                                content_data['user_info']['url'] = user_url
-
-                                # 留存数据
-                                # send(ws, 'content_data', content_data)
-                                gather_comment.append(content_data)
-                                data_keys.append(data_key)
-
-                                # 返回
-                                run_sel(lambda :Selector(2).type("ImageView").desc("返回").click().find())
-                                # action.Key.back()
-                                # exit()
-                                # print('44444444444444')
-                        except Exception as e:
-                            print('异常++++++++++++++++++++++++++')
-                            print(traceback.format_exc())
-
-                if is_jump:
-                    break
-                # 滑动
-                display = Device.display()
-                width = display.widthPixels
-                height = display.heightPixels
-
-                # 从屏幕中间向下滑动（向下滚动页面）
-                # 注意：向下滑动，终点y比起点y大
-                action.slide(
-                    x=width // 2,
-                    y=int(height * 0.8),  # 从屏幕下方开始
-                    x1=width // 2,
-                    y1=int(height * 0.2),  # 到屏幕上方
-                    dur=500  # 持续时间 ms
-                )
-                time.sleep(0.3)
-
-                if g_num >= 3:
-                    break
-
-                if len(gather_comment) > old:
-                    g_num = 0
-                else:
-                    g_num += 1
-
-                old = len(gather_comment)
-                print('55555555555555555')
-
-    send(ws, 'func_phone_xhs_content_data', gather_comment)
-    print('func_phone_xhs_content_data')
-    print(gather_comment)
-    
-    print(note_id+'zzzz')
-    pass
+def is_shop_detail_page():
+    try:
+        if Selector(2).text("销量").type("TextView").find() and Selector(2).text("价格").type("TextView").find():
+            return True
+        return False
+    except:
+        return False

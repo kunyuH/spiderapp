@@ -13,7 +13,7 @@ from ..service.global_context import GCT
 from ..service.xhs.note import on_message_note
 from ..service.hoo_sock import HooSock
 from ..utils.tools import off
-from ..service.xhs.common import on_message_content
+from ..service.xhs.comment import on_message_content
 
 def run():
     try:
