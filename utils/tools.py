@@ -100,6 +100,11 @@ def out_success(ws, msg):
         "type": "out_success",
         "msg": msg
     }))
+def out_warning(ws, msg):
+    ws.send(json.dumps({
+        "type": "out_warning",
+        "msg": msg
+    }))
 
 def send(ws, type, option):
     ws.send(json.dumps({
