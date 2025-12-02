@@ -12,7 +12,7 @@ from ascript.android import action
 from ascript.android.system import Device
 
 from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, \
-    out_info, out_success, send, run_sel, getUrl, getLinkToNoteUrl
+    out_info, out_success, send, run_sel, getUrl, getLinkToNoteUrl, run_sel_s
 
 
 def ip_date(content):
@@ -144,7 +144,7 @@ def on_message_content(ws, option):
 
             # 点击按最新
             run_sel(lambda :Selector(2).text(".*条评论").type("TextView").click().find(),3)
-            run_sel(lambda: Selector(2).text("按最新").type("TextView").parent(1).click().find(),2)
+            run_sel(lambda: Selector(2).text("最新").type("TextView").parent(1).click().find(),2)
             time.sleep(0.5)
 
             is_jump = False
@@ -272,8 +272,8 @@ def on_message_content(ws, option):
                                 # 用户获赞与收藏
                                 interaction = ffi[4].text if ffi is not None and len(ffi) > 4 else ''
 
-                                run_sel(lambda :Selector(2).type("ImageView").desc("更多").click().find())
-                                run_sel(lambda :Selector(2).desc("复制链接").type("Button").child().type("ViewGroup").click().find())
+                                run_sel_s(lambda :Selector(2).type("ImageView").desc("更多").click().find())
+                                run_sel_s(lambda :Selector(2).desc("复制链接").type("Button").child().type("ViewGroup").click().find())
                                 # exit()
                                 user_url = Clipboard.get()
                                 user_url = getUrl(user_url)

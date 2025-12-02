@@ -237,35 +237,83 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
     # 排序依据点击
     if sort_type != 'general':
         if sort_type == 'time_descending':  # 最新
-            Selector(2).type("TextView").text("最新").parent(1).click().find()
+            (Selector(2).type("TextView").text("最新")
+             .parent(1)
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .click().find())
         elif sort_type == 'popularity_descending':  # 最多点赞
-            Selector(2).type("TextView").text("最多点赞").parent(1).click().find()
+            (Selector(2).type("TextView").text("最多点赞")
+             .parent(1)
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .click().find())
         elif sort_type == 'comment_descending':  # 最多评论
-            Selector(2).type("TextView").text("最多评论").parent(1).click().find()
+            (Selector(2).type("TextView").text("最多评论")
+             .parent(1)
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .click().find())
         elif sort_type == 'collect_descending':  # 最多收藏
-            Selector(2).type("TextView").text("最多收藏").parent(1).click().find()
+            (Selector(2).type("TextView").text("最多收藏")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
     # 笔记类型点击
     if filter_note_type != '不限':
         if filter_note_type == '视频':  # 视频
-            Selector(2).type("TextView").text("视频").parent(1).click().find()
+            (Selector(2).type("TextView").text("视频")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
         elif filter_note_type == '图文':  # 图文
-            Selector(2).type("TextView").text("图文").parent(1).click().find()
+            (Selector(2).type("TextView").text("图文")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
     # 发布时间点击
     if filter_note_time != '不限':
         if filter_note_time == '一天内':  # 一天内
-            Selector(2).type("TextView").text("一天内").parent(1).click().find()
+            (Selector(2).type("TextView").text("一天内")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
         elif filter_note_time == '一周内':  # 一周内
-            Selector(2).type("TextView").text("一周内").parent(1).click().find()
+            (Selector(2).type("TextView").text("一周内")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
         elif filter_note_time == '半年内':  # 半年内
-            Selector(2).type("TextView").text("半年内").parent(1).click().find()
+            (Selector(2).type("TextView").text("半年内")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
     # 搜索范围点击
     if filter_note_range != '不限':
         if filter_note_range == '已看过':  # 已看过
-            Selector(2).type("TextView").text("已看过").parent(1).click().find()
+            (Selector(2).type("TextView").text("已看过")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
         elif filter_note_range == '未看过':  # 未看过
-            Selector(2).type("TextView").text("未看过").parent(1).click().find()
+            (Selector(2).type("TextView").text("未看过")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
         elif filter_note_range == '已关注':  # 已关注
-            Selector(2).type("TextView").text("已关注").parent(1).click().find()
+            (Selector(2).type("TextView").text("已关注")
+             .path(".*/FrameLayout/ViewGroup/.*")
+             # .parent(3)
+             .parent(1)
+             .click().find())
 
     # 点击收起
     Selector(2).text("收起").type("TextView").parent(1).click().find()
