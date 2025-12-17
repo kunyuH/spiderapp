@@ -63,7 +63,7 @@ def tunnel(k,v=None):
                     off()
                     print('===============================================')
                 pass
-            HooSock(f"ws://{resobj.get('ip')}",app_uuid).set_on_message(on_message).start()
+            HooSock(f"ws://{resobj.get('ip')}:{resobj.get('port')}",app_uuid).set_on_message(on_message).start()
     except Exception as e:
         print(e)
         traceback.print_exc()

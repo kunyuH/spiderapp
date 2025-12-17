@@ -38,9 +38,16 @@
                         </div>
                     </div>
                     <div class="layui-inline">
-                        <label class="layui-form-label">服务器</label>
+                        <label class="layui-form-label">ip</label>
                         <div class="layui-input-inline">
                             <input id="appui_user" type="text" name="ip" placeholder="请输入服务器ip" autocomplete="off"
+                                class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label">端口</label>
+                        <div class="layui-input-inline">
+                            <input id="appui_user" type="text" name="port" placeholder="请输入服务器端口" autocomplete="off"
                                 class="layui-input">
                         </div>
                     </div>
@@ -87,6 +94,17 @@
                        data.app_uuid = randomString();
                     }
                     airscript.call("set_app_uuid",data.app_uuid);
+
+                    // port 不存在或者为空 则默认为10102
+                    if (data.port === undefined || data.port === '') {
+                       data.port = 10102;
+                    }
+
+                    // 增加 port 后需兼容之前数据 如果ip中写有端口 则将端口去除
+                    if (data.ip && data.ip.indexOf(":") > 0) {
+                        data.ip = data.ip.split(":")[0];
+                    }
+
                     form.val('formFilter', data); // 回填数据到表单
                     form.render(); // 重新渲染表单（确保下拉框等动态元素正确显示）
                 } catch (e) {

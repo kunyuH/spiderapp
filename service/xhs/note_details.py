@@ -55,9 +55,13 @@ def on_message_note_details(ws, option):
     # 等待进入笔记详情页
     run_sel(lambda: Selector(2).type("Button").desc("评论.*").find())
     print("======================"+op)
+    # 分隔字符串
+    ops = op.split('&')
+    send_type = None
+    send_data = {}
     # 进行点赞
-    if op == 'like':
-        # todo 确认是否已经点赞
+    if 'like' in ops:
+        # 确认是否已经点赞
         if run_sel(lambda: Selector(2).type("Button").desc("已点赞.*").find(),re_time=0.1):
             new_like = False
             # out_warning(ws, f"已经点过赞了")
@@ -66,12 +70,23 @@ def on_message_note_details(ws, option):
             run_sel(lambda: Selector(2).type("Button").desc("点赞.*").find()).click()
             # out_success(ws, f"点赞成功")
 
-        send(ws, 'func_phone_xhs_note_like', {
-            'data': {
-                'new_like':new_like
-            },
-        })
-    elif op == 'detail':
+        send_type = 'func_phone_xhs_note_like'
+        send_data['new_like'] = new_like
+
+    if 'collect' in ops:      # 进行收藏
+        # 确认是否已经收藏
+        if run_sel(lambda: Selector(2).type("Button").desc("已收藏.*").find(), re_time=0.1):
+            new_collect = False
+            # out_warning(ws, f"已经收藏过了")
+        else:
+            new_collect = True
+            run_sel(lambda: Selector(2).type("Button").desc("收藏.*").find()).click()
+            # out_success(ws, f"收藏成功")
+
+        send_type = 'func_phone_xhs_note_like'
+        send_data['new_collect'] = new_collect
+
+    if op == 'detail':
         note_info = {
             '标题': '',
             '封面图': '',
@@ -110,10 +125,13 @@ def on_message_note_details(ws, option):
             '店铺已售': note_info.get('店铺已售'),
             '店铺粉丝': note_info.get('店铺粉丝'),
         }
-        send(ws, 'func_phone_xhs_note_like', {
-            'data': gather_note,
-        })
+        send_type = 'func_phone_xhs_note_like'
+        send_data = gather_note
 
+    if send_type:
+        send(ws, send_type, {
+            'data': send_data,
+        })
 
     print('func_phone_xhs_note')
     pass
