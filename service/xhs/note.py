@@ -269,7 +269,7 @@ def on_message_note(ws, option):
         time.sleep(0.2)
         # exit()
 
-        if g_num >= 3:
+        if g_num >= 6:
             break
         if len(gather_note) > old:
             g_num = 0
