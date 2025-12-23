@@ -3,6 +3,8 @@ import json
 import re
 import time
 import traceback
+from urllib.parse import quote
+
 from ascript.android.system import R
 from android.content import Intent
 from android.net import Uri
@@ -54,7 +56,9 @@ def on_message_note(ws, option):
     # 采集第一页才需要 进入笔记搜索页 以及 点击筛选项
     if page == 1:
         # 进入这个笔记内
-        uri = Uri.parse(f"xhsdiscover://search/result?keyword={keyword}")
+        encoded_keyword = quote(keyword, safe="")
+        uri = Uri.parse(f"xhsdiscover://search/result?keyword={encoded_keyword}")
+        print(f"xhsdiscover://search/result?keyword={encoded_keyword}")
         it = Intent(Intent.ACTION_VIEW, uri)
         it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         R.context.startActivity(it)
@@ -201,6 +205,7 @@ def on_message_note(ws, option):
                 gr_total = (page-1)*page_size + len(gather_note)
 
                 out_success(ws, f'{gr_total}. {note_title}')
+                # out_success(ws, f'{gr_total}. {json.dumps(note_info, ensure_ascii=False)}')
 
                 # 判断是否足够一页数据了
                 if len(gather_note) >= page_size:
@@ -216,11 +221,11 @@ def on_message_note(ws, option):
             # 返回
             print('===========返回关键词搜索列表页=====')
             time.sleep(0.2)
-            # if note_info.get('类型') == 'video':
-            #     Selector(2).desc("返回").type("ImageView").click().find()
-            # else:
+            if note_info.get('类型') == 'video':
+                Selector(2).desc("返回").type("ImageView").click().find()
+            else:
             #     Selector(2).type("ImageView").click().find()
-            action.Key.back()
+                action.Key.back()
             time.sleep(0.2)
             t4 = time.time()
             print(f"c耗时：{t4 - t3}")

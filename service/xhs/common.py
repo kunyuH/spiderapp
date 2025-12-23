@@ -32,6 +32,8 @@ def get_note_info(note_info=None,is_shop=False):
     # ================获取分享的笔记链接================
     if is_video:
         Selector(2).type("Button").desc("分享.*").click().find()
+        # 也可能是下面这个
+        Selector(2).type("ImageView").desc("分享.*").click().find()
     else:
         Selector(2).type("ImageView").id("com.xingin.xhs:id/moreOperateIV").click().find()
     run_sel_s(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4)
