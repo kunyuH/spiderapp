@@ -58,7 +58,6 @@ def on_message_note(ws, option):
         # 进入这个笔记内
         encoded_keyword = quote(keyword, safe="")
         uri = Uri.parse(f"xhsdiscover://search/result?keyword={encoded_keyword}")
-        print(f"xhsdiscover://search/result?keyword={encoded_keyword}")
         it = Intent(Intent.ACTION_VIEW, uri)
         it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         R.context.startActivity(it)
