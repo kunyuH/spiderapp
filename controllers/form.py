@@ -7,6 +7,7 @@ from ascript.android.ui import FloatWindow
 from ascript.android.ui import Dialog
 from ascript.android.system import Device
 
+from ..service.xhs.user_details import on_message_user_details
 from ..service.xhs.note_details import on_message_note_details
 from ..service.dy.phone_gather import on_message_op
 from ..service.xhs.dm import on_message_dm
@@ -55,6 +56,8 @@ def tunnel(k,v=None):
                     on_message_content(ws, option)
                 elif type == 'xhs_gather_note_details':       # 帖子id 采集详情 or 点赞
                     on_message_note_details(ws, option)
+                elif type == 'xhs_gather_user_details':  # 用户id 采集用户信息 or 关注
+                    on_message_user_details(ws, option)
                 elif type == 'xhs_dm_comment':           # 帖子user id 私信
                     on_message_dm(ws, option)
                 elif type == 'dy_yy_phone_gather_by_phone_device':  # 定制-快手运营-店铺手机号采集

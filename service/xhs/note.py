@@ -182,6 +182,8 @@ def on_message_note(ws, option):
                     '点赞数': note_info.get('点赞数'),
                     '收藏数': note_info.get('收藏数'),
                     '评论数': note_info.get('评论数'),
+                    '分享数': note_info.get('分享数'),
+                    '类型': note_info.get('类型'),
 
                     '笔记ID': note_info.get('笔记ID'),
                     '笔记链接': note_info.get('笔记链接'),
@@ -265,10 +267,11 @@ def on_message_note(ws, option):
             dur=500  # 持续时间 ms
         )
 
-        time.sleep(0.2)
+        time.sleep(0.5)
         # exit()
 
         if g_num >= 6:
+            print(f'结束--{g_num}')
             break
         if len(gather_note) > old:
             g_num = 0

@@ -168,6 +168,13 @@ def getNoteIdByUrl(url):
     :return:
     """
     return str(url).split("/")[-1].split("?")[0]
+def getUserIdByUrl(url):
+    """
+    从用户链接中获取用户ID
+    :param url:
+    :return:
+    """
+    return str(url).split("/")[-1].split("?")[0]
 
 def getUrl(str):
     strs = re.findall(r'https?://[^\s]+', str)

@@ -23,9 +23,11 @@ def get_note_info(note_info=None,is_shop=False):
     run_sel_s(lambda :Selector(2).desc("点赞.*").type("Button").find(),4)
 
     is_video = False
+    note_info['类型'] = 'normal'
     # 确认是笔记 还是 视频
     if Selector(2).desc("暂停").type("ViewGroup").find():
         is_video = True
+        note_info['类型'] = 'video'
 
     t2 = time.time()
     print(f"aa耗时：{t2 - t1}")
@@ -36,6 +38,7 @@ def get_note_info(note_info=None,is_shop=False):
         Selector(2).type("ImageView").desc("分享.*").click().find()
     else:
         Selector(2).type("ImageView").id("com.xingin.xhs:id/moreOperateIV").click().find()
+    time.sleep(0.2)
     run_sel_s(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4)
     t22 = time.time()
     print(f"aba耗时：{t22 - t2}")
@@ -50,17 +53,18 @@ def get_note_info(note_info=None,is_shop=False):
             Selector(2).type("Button").desc("分享.*").click().find()
         else:
             Selector(2).type("ImageView").drawingOrder(2).click().find()
+        time.sleep(0.2)
         run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
         share_url_str = Clipboard.get()
         share_url = getUrl(share_url_str)
     t4 = time.time()
     print(f"ac耗时：{t4 - t3}")
     if share_url is None:
-        time.sleep(1)
         if is_video:
             Selector(2).type("Button").desc("分享.*").click().find()
         else:
             Selector(2).type("ImageView").drawingOrder(2).click().find()
+        time.sleep(0.5)
         run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
         share_url_str = Clipboard.get()
         share_url = getUrl(share_url_str)
@@ -105,6 +109,8 @@ def get_note_info(note_info=None,is_shop=False):
                     '收藏', '')
                 note_info['评论数'] = Selector(2).type("Button").desc('评论.*').find().desc.replace(' ', '').replace(
                     '评论', '')
+                note_info['分享数'] = Selector(2).type("Button").desc('分享.*').find().desc.replace(' ', '').replace(
+                    '分享', '')
         else:
             try:
                 note_info['标题'] = Selector(2).type("TextView").drawingOrder(5).find().text
