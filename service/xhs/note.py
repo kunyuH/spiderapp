@@ -76,9 +76,7 @@ def on_message_note(ws, option):
         GCT().set('data_keys', [])
         # 存放全部采集到的笔记数据  用于确认页面上的笔记是否采集过了
         GCT().set('all_note', [])
-    else:
-        # 非第一页 开始暂停
-        t_sleep(frequency)
+
     # 存放本次采集到的笔记数据
     gather_note = []
     data_keys = GCT().get('data_keys')
@@ -95,6 +93,12 @@ def on_message_note(ws, option):
         if notes is None:
             notes = []
         for idx, note in enumerate(notes, start=1):  # start=1 表示从 1 开始计数
+
+            if not check_end():
+                break
+
+            # 暂停
+            t_sleep(frequency)
 
             print('=====笔记项=======')
             t1 = time.time()

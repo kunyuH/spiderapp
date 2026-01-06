@@ -90,7 +90,6 @@ def on_message_note_details(ws, option):
         note_info = {
             '标题': '',
             '封面图': '',
-            '用户名称': '',
             '用户主页链接': '',
             '用户ID': '',
             '发布时间': '',
@@ -107,6 +106,8 @@ def on_message_note_details(ws, option):
             '点赞数': note_info.get('点赞数'),
             '收藏数': note_info.get('收藏数'),
             '评论数': note_info.get('评论数'),
+            '分享数': note_info.get('分享数'),
+            '类型': note_info.get('类型'),
 
             '笔记ID': note_info.get('笔记ID'),
             '笔记链接': note_info.get('笔记链接'),

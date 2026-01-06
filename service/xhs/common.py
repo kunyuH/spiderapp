@@ -322,7 +322,7 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
              # .parent(3)
              .parent(1)
              .click().find())
-
+    time.sleep(3)
     # 点击收起
     Selector(2).text("收起").type("TextView").parent(1).click().find()
 
