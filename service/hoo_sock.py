@@ -114,6 +114,10 @@ class HooSock:
 
         Dialog.toast("已连接", dur=2000, gravity=1 | 16, x=0, y=200)
 
+        # 启动心跳检测
+        # 每隔一段时间ping服务器
+        self._start_heartbeat(ws)
+
         # 发送 UUID
         send(ws=ws, type='change_uuid', option={
             "app_uuid": self.app_uuid
@@ -130,18 +134,52 @@ class HooSock:
             self.stop()
             return
 
-        print("=====：%s" % message)
         try:
             if is_json(message):
                 msg = json.loads(message)
-                threading.Thread(
-                    target=self.func,
-                    args=(ws, msg.get('type'), msg.get('option')),
-                    daemon=True
-                ).start()
+                if msg.get("type") == "__pong__":
+                    rtt = int(time.time() * 1000) - msg.get("ts")
+                    print(f"📡 WebSocket RTT: {rtt} ms")
+                    # Dialog.toast(f"{rtt} ms", dur=5000)
+                    # Dialog.toast(f"{rtt}ms", 6000, 5 | 48, 0, 0, "#AD93FF", "#F8C03E")
+                    self._record_rtt(rtt)
+                    return
+                else:
+                    print("=====：%s" % message)
+                    threading.Thread(
+                        target=self.func,
+                        args=(ws, msg.get('type'), msg.get('option')),
+                        daemon=True
+                    ).start()
         except Exception as e:
             print(e)
             traceback.print_exc()
+
+    def _start_heartbeat(self, ws):
+        def loop():
+            while self.connected and not self.manual_stop:
+                try:
+                    ts = int(time.time() * 1000)
+                    ws.send(json.dumps({
+                        "type": "__ping__",
+                        "ts": ts
+                    }))
+                except Exception as e:
+                    print("心跳发送失败:", e)
+                    break
+                time.sleep(5)  # 5 秒一次
+
+        threading.Thread(target=loop, daemon=True).start()
+
+    def _record_rtt(self, rtt):
+        if rtt < 200:
+            level = "GOOD"
+        elif rtt < 800:
+            level = "WARN"
+        else:
+            level = "BAD"
+
+        print(f"网络质量: {level}")
 
     def _on_error(self, ws, error):
         print("####### on_error #######")
@@ -174,73 +212,3 @@ class HooSock:
             ws.close()
         GCT().set(self.web_sock_key, None)
         print("WebSocket 已手动关闭")
-
-    def start_z(self):
-        if GCT().get('Websocket') is None:
-
-            def on_message(ws, message):
-                if message == '__ping__':
-                    ws.send('__pong__')
-                    # print('__pong__')
-                elif message == "__server_shutdown__":
-                    print("服务端关闭了，客户端准备断开")
-                    ws.close()
-                    return
-                else:
-                    print("=====：%s" % message)
-                    try:
-                        # print("####### on_message #######")
-                        # print("message：%s" % message)
-                        if is_json(message):
-                            msg = json.loads(message)
-                            # 客户端id
-                            # client_id = msg.get('id')
-                            # 把耗时逻辑放到子线程执行
-                            threading.Thread(
-                                target=self.func,
-                                args=(ws, msg.get('type'), msg.get('option')),
-                                daemon=True
-                            ).start()
-
-                    except Exception as e:
-                        print(e)
-                        traceback.print_exc()
-                pass
-
-            def on_error(ws, error):
-                print("####### on_error #######")
-                print("error：%s" % error)
-                traceback.print_exc()
-                # Dialog.toast("连接异常", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
-                Dialog.confirm("连接已断开！", None, "确认")
-                system.exit()
-
-            def on_close(ws,close_status_code, close_msg):
-                print("####### on_close #######")
-                print("close_status_code:", close_status_code)
-                print("close_msg:", close_msg)
-                Dialog.confirm("连接已断开！", None, "确认")
-                system.exit()
-
-            def on_open(ws):
-                print("####### on_open #######")
-                Dialog.toast("已连接", dur=3000, gravity=1 | 16, x=0, y=200, bg_color=None, color=None, font_size=0)
-                send(ws=ws,type='change_uuid',option={
-                    "app_uuid": self.app_uuid
-                })
-
-            def server_thread():
-                # url = "ws://192.168.0.101:10102"
-                # url = self.url
-                print(self.url)
-
-                ws = WebSocketApp(self.url,
-                                  on_open=on_open,
-                                  on_message=on_message,
-                                  on_error=on_error,
-                                  on_close=on_close
-                )
-                GCT().set(self.web_sock_key, ws)
-                ws.run_forever()  # 不传 timeout
-
-            threading.Thread(target=server_thread, daemon=True).start()

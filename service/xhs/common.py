@@ -11,13 +11,15 @@ from ascript.android.system import Clipboard
 from ascript.android import action
 from ascript.android.system import Device
 
-from ...utils.tools import run_sel, getNoteIdByUrl, getUrl, getLinkToNoteUrl, run_sel_s
+from ...utils.tools import run_sel, getNoteIdByUrl, getUrl, getLinkToNoteUrl, run_sel_s, generate_guid
 
-def get_note_info(note_info=None,is_shop=False):
+
+def get_note_info(note_info=None,is_shop=False,is_get_url=True):
     """
     获取笔记详情  两种情况 1.笔记  2.视频
     :return:
     """
+    # is_get_url = False
     t1 = time.time()
     # 确认详情页已经加载
     run_sel_s(lambda :Selector(2).desc("点赞.*").type("Button").find(),4)
@@ -31,59 +33,64 @@ def get_note_info(note_info=None,is_shop=False):
 
     t2 = time.time()
     print(f"aa耗时：{t2 - t1}")
-    # ================获取分享的笔记链接================
-    if is_video:
-        Selector(2).type("Button").desc("分享.*").click().find()
-        # 也可能是下面这个
-        Selector(2).type("ImageView").desc("分享.*").click().find()
-    else:
-        Selector(2).type("ImageView").id("com.xingin.xhs:id/moreOperateIV").click().find()
-    time.sleep(0.2)
-    run_sel_s(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4)
-    t22 = time.time()
-    print(f"aba耗时：{t22 - t2}")
-    share_url_str = Clipboard.get()
-    share_url = getUrl(share_url_str)
-    t3 = time.time()
-    print(f"ab耗时：{t3 - t22}")
-    print('========点击复制后==========')
-    print(share_url)
-    if share_url is None:
+    if is_get_url:
+        # ================获取分享的笔记链接================
         if is_video:
             Selector(2).type("Button").desc("分享.*").click().find()
+            # 也可能是下面这个
+            Selector(2).type("ImageView").desc("分享.*").click().find()
         else:
-            Selector(2).type("ImageView").drawingOrder(2).click().find()
+            Selector(2).type("ImageView").id("com.xingin.xhs:id/moreOperateIV").click().find()
         time.sleep(0.2)
-        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
+        run_sel_s(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4)
+        t22 = time.time()
+        print(f"aba耗时：{t22 - t2}")
         share_url_str = Clipboard.get()
         share_url = getUrl(share_url_str)
-    t4 = time.time()
-    print(f"ac耗时：{t4 - t3}")
-    if share_url is None:
-        if is_video:
-            Selector(2).type("Button").desc("分享.*").click().find()
-        else:
-            Selector(2).type("ImageView").drawingOrder(2).click().find()
-        time.sleep(0.5)
-        run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
-        share_url_str = Clipboard.get()
-        share_url = getUrl(share_url_str)
-    t5 = time.time()
-    print(f"ad耗时：{t5 - t4}")
-    print(share_url)
-    if share_url is None:
-        raise Exception('没有分享的链接')
-    # 分享链接转实际链接
-    url = share_url
-    if 'xhslink' in share_url:
-        url = getLinkToNoteUrl(option={
-            'url': share_url
-        })
+        t3 = time.time()
+        print(f"ab耗时：{t3 - t22}")
+        print('========点击复制后==========')
+        print(share_url)
+        if share_url is None:
+            if is_video:
+                Selector(2).type("Button").desc("分享.*").click().find()
+            else:
+                Selector(2).type("ImageView").drawingOrder(2).click().find()
+            time.sleep(0.2)
+            run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
+            share_url_str = Clipboard.get()
+            share_url = getUrl(share_url_str)
+        t4 = time.time()
+        print(f"ac耗时：{t4 - t3}")
+        if share_url is None:
+            if is_video:
+                Selector(2).type("Button").desc("分享.*").click().find()
+            else:
+                Selector(2).type("ImageView").drawingOrder(2).click().find()
+            time.sleep(0.5)
+            run_sel(lambda: Selector(2).desc("复制链接").type("Button").child(1).click().find(), 4, 0.3)
+            share_url_str = Clipboard.get()
+            share_url = getUrl(share_url_str)
+        t5 = time.time()
+        print(f"ad耗时：{t5 - t4}")
+        print(share_url)
+        if share_url is None:
+            raise Exception('没有分享的链接')
+        # 分享链接转实际链接
+        url = share_url
+        if 'xhslink' in share_url:
+            url = getLinkToNoteUrl(option={
+                'url': share_url
+            })
+
+        note_info['笔记分享链接'] = share_url
+        note_info['笔记ID'] = getNoteIdByUrl(url)
+        note_info['笔记链接'] = url
+    else:
+        note_info['笔记ID'] = generate_guid()
+        t5 = time.time()
 
     note_info['类型'] = 'video' if is_video else 'normal'
-    note_info['笔记分享链接'] = share_url
-    note_info['笔记ID'] = getNoteIdByUrl(url)
-    note_info['笔记链接'] = url
     t6 = time.time()
     print(f"ae耗时：{t6 - t5}")
     try:
@@ -103,14 +110,25 @@ def get_note_info(note_info=None,is_shop=False):
         if is_video:
             note_info['内容'] = run_sel_s(lambda :Selector(2).id("com.xingin.xhs:id/noteContentText").find(),2).desc
             if '评论数' not in note_info:
-                note_info['点赞数'] = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
-                                                2).desc.replace(' ', '').replace('点赞', '')
+                like = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
+                                                2)
+                if like:
+                    note_info['点赞数'] = like.desc.replace(' ', '').replace('点赞', '')
+                else:
+                    note_info['点赞数'] = ''
+                # note_info['点赞数'] = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
+                #                                 2).desc.replace(' ', '').replace('点赞', '')
                 note_info['收藏数'] = Selector(2).type("Button").desc('收藏.*').find().desc.replace(' ', '').replace(
                     '收藏', '')
                 note_info['评论数'] = Selector(2).type("Button").desc('评论.*').find().desc.replace(' ', '').replace(
                     '评论', '')
-                note_info['分享数'] = Selector(2).type("Button").desc('分享.*').find().desc.replace(' ', '').replace(
-                    '分享', '')
+                share = Selector(2).type("Button").desc('分享.*').find()
+                if share:
+                    note_info['分享数'] = share.desc.replace(' ', '').replace('分享', '')
+                else:
+                    note_info['分享数'] = ''
+                # note_info['分享数'] = Selector(2).type("Button").desc('分享.*').find().desc.replace(' ', '').replace(
+                #     '分享', '')
         else:
             try:
                 note_info['标题'] = Selector(2).type("TextView").drawingOrder(5).find().text
@@ -133,6 +151,8 @@ def get_note_info(note_info=None,is_shop=False):
         print(f"ag耗时：{t8 - t7}")
         if is_shop:
             # 点击用户名称进入用户主页
+            print(is_video)
+            print('aaaaaaaaaaa')
             if is_video:
                 Selector(2).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("Button").clickable(
                     True).click().find()
@@ -142,7 +162,8 @@ def get_note_info(note_info=None,is_shop=False):
             # ===============获取店铺信息================
             if is_shop and note_info['是否有店铺'] == '有':
                 # 进入作者店铺内
-                Selector(2).text("店铺").type("TextView").parent(1).click().find()
+                Selector(2).text("店铺").type("TextView").parent(1).clickable(True).click().find()
+                time.sleep(1)
                 note_info = get_shop_info(note_info)
                 # 返回用户信息页
                 print('===========返回用户信息页=====')
