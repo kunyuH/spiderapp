@@ -11,6 +11,7 @@ from ascript.android.system import Clipboard
 from ascript.android import action
 from ascript.android.system import Device
 
+from ..dy.phone_gather import is_user_page
 from ...utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, \
     out_info, out_success, send, run_sel, getUrl, getLinkToNoteUrl, run_sel_s
 
@@ -116,31 +117,38 @@ def on_message_content(ws, option):
     comment_ip_search = option.get('comment_ip_search')  # 评论ip搜索关键字
     comment_word_num = option.get('comment_word_num')  # 评论字数小于
 
+    """
+    xhsdiscover://comments/<note_id> 
+    """
+    # print(f"xhsdiscover://comments/{note_id}?uid=6513ed7a000000002402d6ea")
     max_num = maxPage * 10
     # Selector.cache(False)
     # 进入这个笔记内
     uri = Uri.parse(f"xhsdiscover://item/{note_id}")
+    # uri = Uri.parse(f"xhsdiscover://comments/{note_id}?uid=6513ed7a000000002402d6ea")
     it = Intent(Intent.ACTION_VIEW, uri)
     it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     R.context.startActivity(it)
     out_info(ws, f"正在打开笔记 {note_id}")
 
     gather_comment = []
+    exit()
 
     # 获取笔记评论量
     # 有评论  则 点击评论  点击按最新
-    content_button = run_sel(lambda :Selector(2).type("Button").desc("评论.*").find())
+    content_button = run_sel_s(lambda :Selector(2).type("Button").desc("评论.*").find(),7)
     if content_button:
         # 去除所有空格
         content_num = content_button.desc.replace(" ", "").replace("评论", "")
+        time.sleep(0.5)
         # true 没有评论
         if content_num == '' or content_num == '0' or content_num == 0:
+            print('end3')
             out_info(ws, f"笔记 【{note_id}】 没有评论")
         else:
             out_info(ws, f"笔记 【{note_id}】 评论量：{content_num}")
-
             # 点击评论
-            run_sel(lambda :content_button.find(Selector(2).click()))
+            run_sel_s(lambda :content_button.find(Selector(2).click()))
 
             # 点击按最新
             run_sel(lambda :Selector(2).text(".*条评论").type("TextView").click().find(),3)
@@ -174,8 +182,13 @@ def on_message_content(ws, option):
                             if not usre_name_obj:
                                 continue
                             usre_name = usre_name_obj.text
-
-                            content = item.find(Selector().child().type('TextView').drawingOrder(4)).text
+                            try:
+                                content = item.find(Selector(2).child().type('TextView').drawingOrder(4)).text
+                            except:
+                                try:
+                                    content = item.find(Selector(2).child().type('TextView').drawingOrder(5)).text
+                                except:
+                                    content = ''
 
                             # 作者
                             try:
@@ -256,10 +269,10 @@ def on_message_content(ws, option):
 
                                 # 获取uid （点击用户名称 进入主页 把链接复制出来 截取里面的uid）
                                 item.find(Selector(2).child().type('TextView').drawingOrder(2).click())
-
+                                time.sleep(0.5)
                                 # 获取用户主页信息
                                 # 用户小红书号
-                                red_id = run_sel(lambda: Selector().text("小红书号.*").find(),3,0).text.replace('小红书号：', '').strip()
+                                red_id = run_sel_s(lambda: Selector(2).text("小红书号.*").find(),4).text.replace('小红书号：', '').strip()
                                 # 用户性别
                                 gen = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/LinearLayout/LinearLayout/LinearLayout").find(),3,0)
                                 gender = gen.desc if gen is not None else ''
@@ -305,6 +318,11 @@ def on_message_content(ws, option):
 
                 if is_jump:
                     break
+
+                # 确认是否在用户主页 如果是 则需要返回一下
+                if is_user_page():
+                    run_sel(lambda: Selector(2).type("ImageView").desc("返回").click().find())
+
                 # 滑动
                 display = Device.display()
                 width = display.widthPixels

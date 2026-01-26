@@ -122,22 +122,27 @@ def get_note_info(note_info=None,is_shop=False,is_get_url=True):
                     '收藏', '')
                 note_info['评论数'] = Selector(2).type("Button").desc('评论.*').find().desc.replace(' ', '').replace(
                     '评论', '')
-                share = Selector(2).type("Button").desc('分享.*').find()
-                if share:
-                    note_info['分享数'] = share.desc.replace(' ', '').replace('分享', '')
-                else:
+                try:
+                    note_info['分享数'] = Selector(2).type("Button").desc('分享.*').find().desc.replace(' ', '').replace(
+                    '分享', '')
+                except:
                     note_info['分享数'] = ''
-                # note_info['分享数'] = Selector(2).type("Button").desc('分享.*').find().desc.replace(' ', '').replace(
-                #     '分享', '')
         else:
-            try:
-                note_info['标题'] = Selector(2).type("TextView").drawingOrder(5).find().text
-            except:
-                note_info['标题'] = ''
+            if note_info['标题'] == '':
+                try:
+                    note_info['标题'] = Selector(2).type("TextView").drawingOrder(5).find().text
+                except:
+                    try:
+                        note_info['标题'] = Selector(2).type("TextView").drawingOrder(5).find().text
+                    except:
+                        note_info['标题'] = ''
             try:
                 note_info['内容'] = Selector(2).type("TextView").drawingOrder(6).find().text
             except:
-                note_info['内容'] = ''
+                try:
+                    note_info['内容'] = Selector(2).type("TextView").drawingOrder(6).find().text
+                except:
+                    note_info['内容'] = ''
 
             if '评论数' not in note_info:
                 note_info['点赞数'] = run_sel_s(lambda: Selector(2).type("Button").desc('点赞.*').find(),
@@ -151,8 +156,6 @@ def get_note_info(note_info=None,is_shop=False,is_get_url=True):
         print(f"ag耗时：{t8 - t7}")
         if is_shop:
             # 点击用户名称进入用户主页
-            print(is_video)
-            print('aaaaaaaaaaa')
             if is_video:
                 Selector(2).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("Button").clickable(
                     True).click().find()
@@ -263,23 +266,29 @@ def get_shop_info(note_info=None):
 def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
     # 点击下拉筛选
     Selector(2).type("ActionBar\$Tab").click().find()
+    parent_index = 3
+    if (Selector(2).type("TextView").text("最新")
+             .parent(1)
+             .clickable(True)
+             .path(".*/FrameLayout/ViewGroup/.*")
+             .find()):
+        parent_index = 1
     # 排序依据点击
     if sort_type != 'general':
         if sort_type == 'time_descending':  # 最新
             (Selector(2).type("TextView").text("最新")
-             .parent(1)
+             .parent(parent_index)
              .path(".*/FrameLayout/ViewGroup/.*")
-             # .parent(3)
              .click().find())
         elif sort_type == 'popularity_descending':  # 最多点赞
             (Selector(2).type("TextView").text("最多点赞")
-             .parent(1)
+             .parent(parent_index)
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
              .click().find())
         elif sort_type == 'comment_descending':  # 最多评论
             (Selector(2).type("TextView").text("最多评论")
-             .parent(1)
+             .parent(parent_index)
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
              .click().find())
@@ -287,7 +296,7 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
             (Selector(2).type("TextView").text("最多收藏")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
     # 笔记类型点击
     if filter_note_type != '不限':
@@ -295,13 +304,13 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
             (Selector(2).type("TextView").text("视频")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
         elif filter_note_type == '图文':  # 图文
             (Selector(2).type("TextView").text("图文")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
     # 发布时间点击
     if filter_note_time != '不限':
@@ -309,19 +318,19 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
             (Selector(2).type("TextView").text("一天内")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
         elif filter_note_time == '一周内':  # 一周内
             (Selector(2).type("TextView").text("一周内")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
         elif filter_note_time == '半年内':  # 半年内
             (Selector(2).type("TextView").text("半年内")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
     # 搜索范围点击
     if filter_note_range != '不限':
@@ -329,19 +338,19 @@ def check_search(sort_type,filter_note_type,filter_note_time,filter_note_range):
             (Selector(2).type("TextView").text("已看过")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
         elif filter_note_range == '未看过':  # 未看过
             (Selector(2).type("TextView").text("未看过")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
         elif filter_note_range == '已关注':  # 已关注
             (Selector(2).type("TextView").text("已关注")
              .path(".*/FrameLayout/ViewGroup/.*")
              # .parent(3)
-             .parent(1)
+             .parent(parent_index)
              .click().find())
     time.sleep(3)
     # 点击收起
