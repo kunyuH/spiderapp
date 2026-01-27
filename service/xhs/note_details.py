@@ -23,7 +23,8 @@ def on_message_note_details(ws, option):
     json_ = {
             "note_id": note_id,
             "note_url": note_url,
-            "op": op,       # 数据采集 or 点赞 or 收藏
+            "comment": comment, # op 有评论时 才会有这个字段
+            "op": op,       # 数据采集 or 点赞 or 收藏 or 评论
         }
     """
     on()
@@ -86,7 +87,32 @@ def on_message_note_details(ws, option):
         send_type = 'func_phone_xhs_note_like'
         send_data['new_collect'] = new_collect
 
-    if op == 'detail':
+    # 发送评论
+    if 'comment' in ops:
+        send_type = 'func_phone_xhs_note_like'
+        comment = option.get('comment')
+        try:
+            # 点击评论框
+            run_sel_s(lambda: Selector(2).type("TextView").desc("评论框").click().find(),re_time=5)
+
+            # 输入评论
+            comment_obj = run_sel_s(lambda: Selector(2).type("EditText").text("留下你的想法吧").find(), 2.5)
+            if comment_obj is None:
+                # 点击评论框
+                run_sel_s(lambda: Selector(2).type("TextView").desc("评论框").click().find(), re_time=5)
+                comment_obj = run_sel_s(lambda: Selector(2).type("EditText").text("留下你的想法吧").find(), 2.5)
+
+            comment_obj.input(comment)
+
+            # 发送评论
+            run_sel_s(lambda: Selector(2).text("发送").type("TextView").click().find(), re_time=5)
+            send_data['new_comment'] = True
+        except Exception as e:
+            send_data['new_comment'] = False
+            traceback.print_exc()
+            out_error(ws, f"发送评论失败 错误：{e}")
+
+    if 'detail' in ops:
         note_info = {
             '标题': '',
             '封面图': '',
