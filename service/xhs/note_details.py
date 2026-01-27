@@ -96,11 +96,11 @@ def on_message_note_details(ws, option):
             run_sel_s(lambda: Selector(2).type("TextView").desc("评论框").click().find(),re_time=5)
 
             # 输入评论
-            comment_obj = run_sel_s(lambda: Selector(2).type("EditText").text("留下你的想法吧").find(), 2.5)
+            comment_obj = run_sel_s(lambda: Selector(2).type("EditText").find(), 2.5)
             if comment_obj is None:
                 # 点击评论框
                 run_sel_s(lambda: Selector(2).type("TextView").desc("评论框").click().find(), re_time=5)
-                comment_obj = run_sel_s(lambda: Selector(2).type("EditText").text("留下你的想法吧").find(), 2.5)
+                comment_obj = run_sel_s(lambda: Selector(2).type("EditText").find(), 2.5)
 
             comment_obj.input(comment)
 

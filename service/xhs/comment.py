@@ -132,7 +132,6 @@ def on_message_content(ws, option):
     out_info(ws, f"正在打开笔记 {note_id}")
 
     gather_comment = []
-    exit()
 
     # 获取笔记评论量
     # 有评论  则 点击评论  点击按最新
