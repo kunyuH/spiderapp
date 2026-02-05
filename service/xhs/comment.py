@@ -285,9 +285,6 @@ def on_message_content(ws, option):
                         #     break
                         continue
 
-                    out_success(ws,
-                                f"{num}. 【{timestamp_to_date(create_time)}】 【{usre_name}】 评论：{content} 作者：{'是' if is_author else '否'} 点赞：{like} IP属地：{ip_location}")
-
                     content_data = content_filter(content_data,{
                         # 'follow_time': follow_time,                               # 评论时间 限制
                         'comment_search_keyword': comment_search_keyword,           # 评论关键词
@@ -297,6 +294,8 @@ def on_message_content(ws, option):
                         'comment_word_num': comment_word_num,                       # 评论字数小于
                     })
 
+                    out_info(ws,
+                                f"{num}. 【{timestamp_to_date(create_time)}】 【{usre_name}】 评论：{content} 作者：{'是' if is_author else '否'} 点赞：{like} IP属地：{ip_location}")
 
                     if content_data is not None:
 
