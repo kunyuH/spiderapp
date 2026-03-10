@@ -7,8 +7,8 @@ import socket
 from websocket import WebSocketApp
 import traceback
 from ascript.android.ui import Dialog
-from ascript.android import system
 
+from utils.tools import system_exit
 from ..utils.tools import is_json, send
 from .global_context import GCT
 
@@ -59,7 +59,7 @@ class HooSock:
             if self.reconnect_count >= self.max_reconnect:
                 print("已达到最大重连次数，停止重连")
                 Dialog.confirm("连接已断开！", None, "确认")
-                system.exit()
+                system_exit()
                 break
 
             print(f"尝试连接 WebSocket 1: {self.url}")
@@ -84,14 +84,14 @@ class HooSock:
 
             if self.manual_stop:
                 Dialog.confirm("连接已关闭！", None, "确认")
-                system.exit()  # 直接退出程序，不再重连
+                system_exit()  # 直接退出程序，不再重连
                 break
 
             # # 手动连接的 出错后 不再自动连了 直接退出
             # print(f'self.is_first_connect:{self.is_first_connect}')
             # if self.is_first_connect:
             #     Dialog.confirm("连接失败！", None, "确认")
-            #     system.exit()  # 直接退出程序，不再重连
+            #     system_exit()  # 直接退出程序，不再重连
             #     break
 
             # 增加重连次数
@@ -199,7 +199,7 @@ class HooSock:
         self.connected = False
         # self.is_first_connect = False
         # Dialog.confirm("连接已关闭！", None, "确认")
-        # system.exit()  # 直接退出程序，不再重连
+        # system_exit()  # 直接退出程序，不再重连
 
     # =================================================
     # 手动关闭连接
