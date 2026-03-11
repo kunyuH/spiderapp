@@ -1,36 +1,40 @@
+import sys
+import time
 import traceback
+import json
 
 from ascript.android.system import R
 from ascript.android.ui import WebWindow
-import json
 from ascript.android.ui import FloatWindow
-from ascript.android.ui import Dialog
-from ascript.android.system import Device
 
-from ..service.xhs.user_details import on_message_user_details
-from ..service.xhs.note_details import on_message_note_details
-from ..service.dy.phone_gather import on_message_op
-from ..service.xhs.dm import on_message_dm
-from ..service.global_context import GCT
-from ..service.xhs.note import on_message_note
-from ..service.hoo_sock import HooSock
-from ..utils.tools import off
-from ..service.xhs.comment import on_message_content
+from ...service.xhs.user_details import on_message_user_details
+from ...service.xhs.note_details import on_message_note_details
+from ...service.dy.phone_gather import on_message_op
+from ...service.xhs.dm import on_message_dm
+from ...service.global_context import GCT
+from ...service.xhs.note import on_message_note
+from ...service.hoo_sock import HooSock
+from ...utils.tools import off
+from ...service.xhs.comment import on_message_content
+from ...utils.ui_helper import UIHelper
 
 def run():
     try:
+        # 初始化 Android UI Helper
+        UIHelper.init_android()
+
         def show_name():
-            Dialog.confirm(f"名称：{GCT().get('app_uuid')}", None, "确认")
+            UIHelper.confirm(f"名称：{GCT().get('app_uuid')}", None, "确认")
 
         # 点击显示名称
         FloatWindow.add_menu("名称", R.img("P.png"), show_name)
 
-        formw = WebWindow(R.ui("form.html"), tunnel)
-        formw.height("70vh")
-        formw.show()
-
-        # 调用 javascript 中的 函数 fun1 ,并传入参数 "自在老师",2
-        formw.call('fun1("自在老师",2)')
+        form = WebWindow(R.ui("form.html"), tunnel)
+        form.height("70vh")
+        form.show()
+        time.sleep(0.5)
+        # 调用 javascript 中的 函数
+        form.call(f'init_platform("{sys.platform}")')
 
     except Exception as e:
         print(e)

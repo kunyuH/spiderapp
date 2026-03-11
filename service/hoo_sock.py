@@ -1,14 +1,18 @@
 import json
+import sys
+import os
 import threading
 import time
-from urllib.parse import urlparse
-
-import socket
-from websocket import WebSocketApp
 import traceback
-from ascript.android.ui import Dialog
 
-from utils.tools import system_exit
+# 添加 lib 目录到 Python 路径（使用内置的 websocket-client）
+_lib_path = os.path.join(os.path.dirname(__file__), '..', 'lib', 'websocket-client-master')
+sys.path.insert(0, _lib_path)
+
+from websocket import WebSocketApp
+
+from ..utils.ui_helper import UIHelper
+from ..utils.tools import system_exit
 from ..utils.tools import is_json, send
 from .global_context import GCT
 
@@ -42,6 +46,9 @@ class HooSock:
     # =============================
     def start(self):
 
+        print(GCT().keys())
+        print('检测缓存情况')
+
         # 避免重复启动
         if GCT().get(self.web_sock_key) is not None:
             print("WebSocket 已在运行，无需重复启动")
@@ -58,7 +65,7 @@ class HooSock:
 
             if self.reconnect_count >= self.max_reconnect:
                 print("已达到最大重连次数，停止重连")
-                Dialog.confirm("连接已断开！", None, "确认")
+                UIHelper.confirm("连接已断开！", None, "确认")
                 system_exit()
                 break
 
@@ -83,7 +90,7 @@ class HooSock:
             GCT().set(self.web_sock_key, None)
 
             if self.manual_stop:
-                Dialog.confirm("连接已关闭！", None, "确认")
+                UIHelper.confirm("连接已关闭！", None, "确认")
                 system_exit()  # 直接退出程序，不再重连
                 break
 
@@ -98,7 +105,7 @@ class HooSock:
             self.reconnect_count += 1
 
             print(f"连接断开，{self.reconnect_interval} 秒后重试...")
-            Dialog.toast(f"连接已断开，第{self.reconnect_count}次重连...", dur=2000)
+            UIHelper.toast(f"连接已断开，第{self.reconnect_count}次重连...", dur=2000)
 
             time.sleep(self.reconnect_interval)
 
@@ -112,7 +119,7 @@ class HooSock:
         # ⭐⭐⭐ 连上后立刻重置重连次数 ⭐⭐⭐
         self.reconnect_count = 0
 
-        Dialog.toast("已连接", dur=2000, gravity=1 | 16, x=0, y=200)
+        UIHelper.toast("已连接", dur=2000, gravity=1 | 16, x=0, y=200)
 
         # 启动心跳检测
         # 每隔一段时间ping服务器
@@ -186,7 +193,7 @@ class HooSock:
         print("error:", error)
         traceback.print_exc()
         # 不 exit，交给自动重连
-        Dialog.toast("连接异常，尝试重连...", dur=2000)
+        UIHelper.toast("连接异常，尝试重连...", dur=2000)
         self.connected = False
         # self.is_first_connect = False
 
@@ -195,7 +202,7 @@ class HooSock:
         print("close_status_code:", status)
         print("close_msg:", msg)
         # 不 exit，自动重连
-        Dialog.toast("连接断开...", dur=2000)
+        UIHelper.toast("连接断开...", dur=2000)
         self.connected = False
         # self.is_first_connect = False
         # Dialog.confirm("连接已关闭！", None, "确认")

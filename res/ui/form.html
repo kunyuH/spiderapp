@@ -69,68 +69,133 @@
           }
           return result;
         }
-        $(function () {
-            $("#asui_close").click(function (e) {
-                //发送关闭指令
-                airscript.call("close", "用户点了关闭")
-                airscript.close();
-            });
-        });
+        let platform = 'android'
+        let ascript_obj = null
 
-        function wclose() {
-            airscript.close();
+        function init_platform(p){
+            platform = p
+            if(platform == 'android'){
+                ascript_obj = airscript
+            }else if(platform == 'ios'){
+                ascript_obj = ascript
+            }
+
+            // layer.alert('asdasd');
+            init()
         }
 
-        layui.use(['form'], function () {
-            var form = layui.form;
-            var layer = layui.layer;
-
-            var cache_data = airscript.get("asdata");
-            if (cache_data && cache_data.length > 0) {
-                try {
-                    var data = JSON.parse(cache_data); // 将缓存数据解析为对象
-                    // app_uuid 不存在或者为空 则生成6位随机名称
-                    if (data.app_uuid === undefined || data.app_uuid === '') {
-                       data.app_uuid = randomString();
-                    }
-                    airscript.call("set_app_uuid",data.app_uuid);
-
-                    // port 不存在或者为空 则默认为10102
-                    if (data.port === undefined || data.port === '') {
-                       data.port = 10102;
-                    }
-
-                    // 增加 port 后需兼容之前数据 如果ip中写有端口 则将端口去除
-                    if (data.ip && data.ip.indexOf(":") > 0) {
-                        data.ip = data.ip.split(":")[0];
-                    }
-
-                    form.val('formFilter', data); // 回填数据到表单
-                    form.render(); // 重新渲染表单（确保下拉框等动态元素正确显示）
-                } catch (e) {
-                    console.error("缓存数据解析失败:", e);
-                }
-            }
-            console.log(cache_data)
-
-            // 提交事件
-            form.on('submit(demo2)', function (data) {
-                var field = data.field; // 获取表单字段值
-                var data = JSON.stringify(field)
-
-                airscript.save("asdata", data)
-                airscript.call("submit", data);
-
-                airscript.close();
-                // 显示填写结果，仅作演示用
-                // layer.alert(JSON.stringify(field), {
-                // title: '当前填写的字段值'
-                // });
-                // 此处可执行 Ajax 等操作
-                // …
-                return false; // 阻止默认 form 跳转
+        function init(){
+            $(function () {
+                $("#asui_close").click(function (e) {
+                    //发送关闭指令
+                        ascript_obj.call("close", "用户点了关闭")
+                        ascript_obj.close();
+                });
             });
-        });
+
+            function wclose() {
+                ascript_obj.close();
+            }
+
+            // ======================
+            // 通用弹窗函数（供 iOS 端调用）
+            // ======================
+
+            // 显示确认对话框（替代 Dialog.confirm）
+            function showConfirmDialog(msg, title, btnText) {
+                layui.use(['layer'], function(){
+                    var layer = layui.layer;
+                    layer.alert(msg, {
+                        title: title || '提示',
+                        btn: [btnText || '确认'],
+                        skin: 'layui-layer-molv'
+                    });
+                });
+            }
+
+            // 显示提示消息（替代 Dialog.toast）
+            function showToast(msg, duration) {
+                layui.use(['layer'], function(){
+                    var layer = layui.layer;
+                    layer.msg(msg, {time: duration || 2000});
+                });
+            }
+
+            // 显示名称对话框
+            function showNameDialog(msg) {
+                layui.use(['layer'], function(){
+                    var layer = layui.layer;
+                    layer.alert(msg, {
+                        title: '当前名称',
+                        skin: 'layui-layer-molv',
+                        btn: ['确认']
+                    });
+                });
+            }
+
+            layui.use(['form'], function () {
+                var form = layui.form;
+                var layer = layui.layer;
+
+                var cache_data = ascript_obj.get("asdata");
+                // layer.alert(ascript_obj);
+                if (cache_data && cache_data.length > 0) {
+                    try {
+                        var data = JSON.parse(cache_data); // 将缓存数据解析为对象
+
+                        // app_uuid 不存在或者为空 则生成6位随机名称
+                        if (data.app_uuid === undefined || data.app_uuid === '') {
+                           data.app_uuid = randomString();
+                        }
+                        ascript_obj.call("set_app_uuid",data.app_uuid);
+
+                        // port 不存在或者为空 则默认为10102
+                        if (data.port === undefined || data.port === '') {
+                           data.port = 10102;
+                        }
+
+                        // 增加 port 后需兼容之前数据 如果ip中写有端口 则将端口去除
+                        if (data.ip && data.ip.indexOf(":") > 0) {
+                            data.ip = data.ip.split(":")[0];
+                        }
+
+                        form.val('formFilter', data); // 回填数据到表单
+                        form.render(); // 重新渲染表单（确保下拉框等动态元素正确显示）
+                    } catch (e) {
+                        console.error("缓存数据解析失败:", e);
+                    }
+                }else{
+                    form.val('formFilter', {
+                        app_uuid: randomString(),
+                        ip: '',
+                        port: 10102
+                    }); // 回填数据到表单
+                    form.render(); // 重新渲染表单（确保下拉框等动态元素正确显示）
+                }
+                console.log(cache_data)
+
+                // 提交事件
+                form.on('submit(demo2)', function (data) {
+                    // layer.alert('asdasd');
+                    var field = data.field; // 获取表单字段值
+                    var data = JSON.stringify(field)
+
+                    ascript_obj.save("asdata", data)
+                    ascript_obj.call("submit", data);
+
+                    ascript_obj.close();
+                    // 显示填写结果，仅作演示用
+
+                    // 此处可执行 Ajax 等操作
+                    // …
+                    return false; // 阻止默认 form 跳转
+                });
+            });
+        }
+
+
+
+
 
     </script>
 

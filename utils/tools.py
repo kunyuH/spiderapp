@@ -1,5 +1,6 @@
 import json
 import re
+import sys
 import threading
 import time
 import uuid
@@ -8,7 +9,15 @@ import requests
 
 from ..service.global_context import GCT
 
-
+def system_exit():
+    if sys.platform == "android":
+        from ascript.android import system
+        system.exit()
+    elif sys.platform == "ios":
+        from ascript.ios import system
+        system.exit()
+    else:
+        sys.exit()
 def timestamp_to_date(timestamp, fmt='%Y-%m-%d %H:%M:%S'):
     # 如果是10位
     if len(str(timestamp)) == 13:
@@ -107,10 +116,21 @@ def out_warning(ws, msg):
     }))
 
 def send(ws, type, option):
-    ws.send(json.dumps({
+    """
+    发送消息（兼容 WebSocket 和原生 socket）
+    - WebSocket: ws.send()
+    - Socket: ws.sendall() + \n
+    """
+    msg = json.dumps({
         "type": type,
         "option": option
-    }))
+    })
+    try:
+        # 尝试使用 sendall (socket)
+        ws.sendall(msg.encode('utf-8') + b'\n')
+    except AttributeError:
+        # 如果是 WebSocket 则使用 send
+        ws.send(msg)
 
 def run_sel(fun, re_time=10, sleep=0.8):
     num = 0

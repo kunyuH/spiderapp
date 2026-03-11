@@ -39,6 +39,14 @@ class GCT:
         with self._lock:
             self._data.clear()
 
+    @classmethod
+    def reset_instance(cls):
+        """重置单例（用于程序重启时彻底清空缓存）"""
+        with cls._lock:
+            if cls._instance:
+                cls._instance._data.clear()
+                cls._instance = None
+
     def __repr__(self):
         with self._lock:
             return f"GCT({self._data})"
