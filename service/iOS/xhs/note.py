@@ -1,5 +1,6 @@
 import hashlib
 import time
+from builtins import print
 from urllib.parse import quote
 
 from ascript.ios.system import R
@@ -89,15 +90,17 @@ def on_message_note(ws, option):
     print('www')
     while check_end():
 
-        print('wwwzzzz')
+        print('www')
         # 获取笔记数据
-        # notes = Selector(2).path("/FrameLayout/LinearLayout/ViewPager/RecyclerView/FrameLayout/TextView").parent(1).find_all()
-        notes = Selector().type("XCUIElementTypeCollectionView").index(1).child().type("XCUIElementTypeCell").visible(True).find_all()
+        notes_obj_str = 'Selector().type("XCUIElementTypeCollectionView").index(1).child().type("XCUIElementTypeCell").visible(True)'
+        notes = eval(notes_obj_str).find_all()
+
         if notes is None:
             print('没有笔记!')
             notes = []
-        print(notes)
         for idx, note in enumerate(notes, start=1):  # start=1 表示从 1 开始计数
+
+            note_obj_str = notes_obj_str + f".index({i + 2})" + '.child().type("XCUIElementTypeOther").child().type("XCUIElementTypeOther").child()'
 
             if not check_end():
                 break
@@ -113,33 +116,32 @@ def on_message_note(ws, option):
             if idx > 1:
                 re_time = 0.2
             # 获取笔记标题
-            # note_title = run_sel_s(lambda :note.find(Selector(3).type('TextView').drawingOrder(13)).text, re_time)
-            note_title = run_sel_s(lambda :note.find(Selector().type("XCUIElementTypeOther").find()).name, re_time)
-            print('asdasdasd')
-            print(note_title)
-            return
+            note_title_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(2).child().type(
+                "XCUIElementTypeStaticText").find()
+            note_title = note_title_obj.value
             if note_title is None:
                 continue
 
             t2 = time.time()
             print(f"耗时：{t2-t1}")
             # 用户昵称
-            author_name = run_sel_s(lambda :note.find(Selector(2).type('TextView').drawingOrder(1)).text, re_time)
-            if note_title is None:
+            author_name_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(3).child().type(
+                'XCUIElementTypeStaticText').index(1).find()
+            author_name = author_name_obj.value
+            if author_name is None:
                 continue
             # 发布时间
-            push_time = run_sel_s(lambda :note.find(Selector(2).type('TextView').drawingOrder(2)).text, re_time)
+            push_time_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(3).child().type(
+                'XCUIElementTypeStaticText').index(3).find()
+            push_time = push_time_obj.value
             if push_time is None or author_name is None:
                 continue
             push_time = parse_chinese_time(push_time)
             # 点赞数
-            like_num = run_sel_s(lambda :note.find(Selector(2).type('TextView').drawingOrder(3)).text, re_time)
-            if like_num:
-                like_num = like_num.replace('赞', '0')
-
-            # print(f"{author_name}=={push_time}=={like_num}=={note_title}")
-            # if like_num is None:
-            #     exit()
+            like_num_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(3).child().type(
+                'XCUIElementTypeButton').child().type('XCUIElementTypeStaticText').find()
+            like_num = like_num_obj.value
+            like_num = like_num.replace('赞', '0')
 
             data_key = hashlib.md5(f"{note_title}{author_name}".encode('utf-8')).hexdigest()
             # print(data_key)
@@ -168,7 +170,7 @@ def on_message_note(ws, option):
             #     continue
 
             # 点击笔记
-            note.find(Selector().click())
+            eval(note_obj_str).type("XCUIElementTypeOther").find().click()
             time.sleep(0.5)
             # 获取笔记详情  两种情况 1.笔记  2.视频
             # 获取笔记

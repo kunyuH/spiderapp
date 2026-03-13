@@ -1,4 +1,8 @@
 import sys
+from .test.test import test_run
+
+test_run()
+exit()
 
 from .service.global_context import GCT
 
@@ -7,6 +11,8 @@ GCT.reset_instance()
 # 清理缓存
 print(GCT().keys())
 print('已经清空')
+
+
 
 if sys.platform == "android":
     from .controllers.android import form
