@@ -51,7 +51,7 @@ def test_run():
         if is_video:
             note_info['内容'] = ''
 
-            interaction_obj_str = 'Selector().label("说点什么...").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).parent(1).brother(1)'
+            interaction_obj_str = 'Selector().label("说点什么...").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).parent(1).brother()'
             if '评论数' not in note_info:
                 print(run_sel_s(lambda: eval(interaction_obj_str).type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeButton").find(),
                                                 2).value)
