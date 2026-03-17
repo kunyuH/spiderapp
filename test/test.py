@@ -4,12 +4,192 @@ from builtins import print, enumerate
 
 from ascript.ios.node import Selector
 from ascript.ios import system
+from ascript.ios import action
+import xml.etree.ElementTree as ET
 
+from ..service.hoo_xml import parse_selector, find_by_steps, find, find_all, check
 from ..utils.tools import run_sel_s, generate_guid, run_sel
+
+
+def get_user_info(note_info=None):
+    """
+    获取作者主页信息
+    """
+    user_all_obj_str = 'Selector().type("XCUIElementTypeCollectionView").enabled(True).visible(True).accessible(False).index(1)'
+    user_info_obj_str = user_all_obj_str + '.child().type("XCUIElementTypeCell").index(2).child().type("XCUIElementTypeOther").index(0).child().type("XCUIElementTypeOther").index(2)'
+
+    # 获取用户名称
+    note_info['用户名称'] = run_sel_s(
+        lambda: eval(user_info_obj_str).child().type("XCUIElementTypeOther").index(0).child().type(
+            "XCUIElementTypeButton").find(), 4).name
+
+    xml_info = Selector.xml()
+    tree = ET.fromstring(xml_info)
+
+    try:
+        # note_info['用户小红书号'] = run_sel_s(lambda :eval(user_info_obj_str).child().type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeStaticText").find(),2).value.replace('小红书号：', '')
+        note_info['用户小红书号'] = \
+        find(tree, user_info_obj_str + '.child().type("XCUIElementTypeStaticText")')[
+            'value'].replace('小红书号：', '')
+    except Exception as e:
+        try:
+            # note_info['用户小红书号'] = eval(user_info_obj_str).child().type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeStaticText").find().value.replace('小红书号：', '')
+            note_info['用户小红书号'] = find(tree,user_info_obj_str + '.child().type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeStaticText")')[
+                'value'].replace('小红书号：', '')
+        except Exception as e:
+            note_info['用户小红书号'] = ''
+
+    try:
+        # note_info['用户IP属地'] = eval(user_info_obj_str).child().type("XCUIElementTypeButton").index(3).find().name.replace('IP属地：', '').replace('IP：', '')
+        note_info['用户IP属地'] = find(tree, user_info_obj_str + '.child().type("XCUIElementTypeButton").index(3)')['name'].replace('IP属地：',
+                                                                                                           '').replace(
+            'IP：', '')
+    except Exception as e:
+        note_info['用户IP属地'] = ''
+
+    try:
+        # note_info['用户简介'] = eval(user_all_obj_str).child().type("XCUIElementTypeCell").index(4).child().type("XCUIElementTypeOther").index(0).child().type("XCUIElementTypeButton").index(0).find().name
+        note_info['用户简介'] = find(tree, user_info_obj_str + '.child().type("XCUIElementTypeCell").index(4).child().type("XCUIElementTypeOther").index(0).child().type("XCUIElementTypeButton").index(0)')['name']
+    except Exception as e:
+        note_info['用户简介'] = ''
+    note_info['用户性别'] = ''
+
+    # 用户关注
+    try:
+        # follows = Selector().value("关注").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(1).brother().type("XCUIElementTypeStaticText").index(0).find().value
+        follows = find(tree,'Selector().value("关注").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(1).brother().type("XCUIElementTypeStaticText").index(0)')['value']
+    except Exception as e:
+        follows = ''
+    # 用户粉丝
+    try:
+        # fans = Selector().value("粉丝").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(1).brother().type("XCUIElementTypeStaticText").index(0).find().value
+        fans = find(tree,
+                    'Selector().value("粉丝").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(1).brother().type("XCUIElementTypeStaticText").index(0)')[
+            'name']
+    except Exception as e:
+        fans = ''
+    # 用户获赞与收藏
+    try:
+        # interaction = Selector().value("获赞与收藏").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(1).brother().type("XCUIElementTypeStaticText").index(0).find().value
+        interaction = find(tree,
+                           'Selector().value("获赞与收藏").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(1).brother().type("XCUIElementTypeStaticText").index(0)')[
+            'value']
+    except Exception as e:
+        interaction = ''
+
+    note_info['用户关注'] = follows
+    note_info['用户粉丝'] = fans
+    note_info['用户获赞与收藏'] = interaction
+
+    try:
+        # if Selector().name("店铺").label("店铺").value("店铺").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).find():
+        if find(tree,
+                'Selector().name("店铺").label("店铺").value("店铺").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True)')[
+            'value']:
+            note_info['是否有店铺'] = '有'
+        else:
+            note_info['是否有店铺'] = '无'
+    except Exception as e:
+        note_info['是否有店铺'] = '无'
+
+    return note_info
+
+def get_shop_info(note_info=None):
+    """
+    获取店铺信息
+    """
+    shop_info_obj_str = ('Selector().type("XCUIElementTypeCollectionView").enabled(True).visible(True).accessible(False).index(2)'
+                         '.child().type("XCUIElementTypeCell").index(0)'
+                         '.child().type("XCUIElementTypeOther").index(0)'
+                         '.child().type("XCUIElementTypeOther").index(0)'
+                         '.child().type("XCUIElementTypeOther").index(0)'
+                         '.child().type("XCUIElementTypeOther").index(0)'
+                         '.child().type("XCUIElementTypeOther").index(0)'
+                         '.child().type("XCUIElementTypeOther").index(1)')
+
+    note_info['店铺名称'] = run_sel(lambda :eval(shop_info_obj_str).child().type("XCUIElementTypeOther").index(0).child().type("XCUIElementTypeButton").index(0).find(),4,0.5).name
+
+    xml_info = Selector.xml()
+    tree = ET.fromstring(xml_info)
+
+    # note_info['店铺星级'] = (eval(shop_info_obj_str).child().type("XCUIElementTypeOther").index(1)
+    #                          .child().type("XCUIElementTypeOther").index(0)
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeStaticText")
+    #                          .find().value)
+
+    note_info['店铺星级'] = find(tree,shop_info_obj_str+'.child().type("XCUIElementTypeOther").index(1)'
+                                                        '.child().type("XCUIElementTypeOther").index(0)'
+                                                        '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeStaticText")')['value']
+
+    # note_info['店铺已售'] = (eval(shop_info_obj_str).child().type("XCUIElementTypeOther").index(1)
+    #                          .child().type("XCUIElementTypeOther").index(1)
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeStaticText")
+    #                          .find().value).replace('已售', '')
+    note_info['店铺已售'] = find(tree,shop_info_obj_str+'.child().type("XCUIElementTypeOther").index(1)'
+                                                        '.child().type("XCUIElementTypeOther").index(1)'
+                                                        '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeOther")'
+                                                         '.child().type("XCUIElementTypeStaticText")')['value'].replace('已售', '')
+
+    # note_info['店铺粉丝'] = (eval(shop_info_obj_str).child().type("XCUIElementTypeOther").index(2)
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeOther")
+    #                          .child().type("XCUIElementTypeStaticText")
+    #                          .find().value).replace('粉丝', '')
+    note_info['店铺粉丝'] = find(tree, shop_info_obj_str + '.child().type("XCUIElementTypeOther").index(2)'
+                                                           '.child().type("XCUIElementTypeOther")'
+                                                           '.child().type("XCUIElementTypeOther")'
+                                                           '.child().type("XCUIElementTypeOther")'
+                                                           '.child().type("XCUIElementTypeOther")'
+                                                           '.child().type("XCUIElementTypeOther")'
+                                                           '.child().type("XCUIElementTypeStaticText")')['value'].replace('粉丝', '')
+    return note_info
+
+
+def is_shop_detail_page():
+    try:
+        if Selector().xpath("//*[starts-with(@name, '已售')]").find():
+            return True
+        return False
+    except:
+        return False
+
+def back():
+    action.touch_and_slide(422,1707,2087,1720,500,600,500)
 
 re_time = 0.2
 def test_run():
+    xml_info = Selector.xml()
+    tree = ET.fromstring(xml_info)
 
+    interaction_obj_str = 'Selector().label("说点什么...").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).parent(1).brother()'
+    like = find(tree,
+                interaction_obj_str + '.type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeButton")')
+
+    print(like)
+    print(eval(interaction_obj_str).type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeButton").find())
+    exit()
     note_info = {}
     is_get_url = False
     is_shop = True
@@ -17,10 +197,14 @@ def test_run():
     # 确认详情页已经加载
     run_sel_s(lambda :Selector().label("点赞").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).find(),4)
 
+    xml_info = Selector.xml()
+    tree = ET.fromstring(xml_info)
+
+
     is_video = True
     note_info['类型'] = 'video'
     # 确认是笔记 还是 视频
-    if Selector().name("笔记正文").type("XCUIElementTypeOther").find():
+    if find(tree,'Selector().name("笔记正文").type("XCUIElementTypeOther")'):
         is_video = False
         note_info['类型'] = 'normal'
     if is_get_url:
@@ -38,9 +222,9 @@ def test_run():
         # ===============获取作者昵称================
         if '用户名称' not in note_info:
             if is_video:
-                note_info['用户名称'] = run_sel(lambda :Selector().type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(0).find(),4,0.1).value
+                note_info['用户名称'] = find(tree,'Selector().type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(0)')['value']
             else:
-                note_info['用户名称'] = run_sel(lambda :Selector().type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(0).find(),4,0.1).value
+                note_info['用户名称'] = find(tree,'Selector().type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(0)')['value']
         # ===============获取笔记标题================
         # ===============获取笔记内容================
         # ===============获取笔记发布时间================
@@ -53,72 +237,64 @@ def test_run():
 
             interaction_obj_str = 'Selector().label("说点什么...").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).parent(1).brother()'
             if '评论数' not in note_info:
-                print(run_sel_s(lambda: eval(interaction_obj_str).type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeButton").find(),
-                                                2).value)
-                print('zzz')
-                exit()
-                like = run_sel_s(lambda: eval(interaction_obj_str).type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeButton").find(),
-                                                2).value.replace(' ', '').replace('点赞', '')
+                like = find(tree,interaction_obj_str+'.type("XCUIElementTypeOther").index(1).child().type("XCUIElementTypeButton")')['name'].replace(' ', '').replace('点赞', '')
+
                 if like:
-                    note_info['点赞数'] = like.desc.replace(' ', '').replace('点赞', '')
+                    note_info['点赞数'] = like.replace(' ', '').replace('点赞', '')
                 else:
                     note_info['点赞数'] = ''
-                note_info['收藏数'] = eval(interaction_obj_str).type("XCUIElementTypeOther").index(2).child().type("XCUIElementTypeButton").find().value.replace(' ', '').replace('收藏', '')
+                note_info['收藏数'] = find(tree,interaction_obj_str+'.type("XCUIElementTypeOther").index(2).child().type("XCUIElementTypeButton")')['name'].replace(' ', '').replace('收藏', '')
 
-                note_info['评论数'] = eval(interaction_obj_str).type("XCUIElementTypeOther").index(3).child().type("XCUIElementTypeButton").find().value.replace(' ', '').replace('评论', '').replace('抢首评', '')
+                note_info['评论数'] = find(tree,interaction_obj_str+'.type("XCUIElementTypeOther").index(3).child().type("XCUIElementTypeButton")')['name'].replace(' ', '').replace('评论', '').replace('抢首评', '')
 
                 note_info['分享数'] = ''
         else:
             try:
-                note_info['内容'] = Selector().name("笔记正文").type("XCUIElementTypeOther").enabled(True).visible(True).accessible(False).find().value
+                note_info['内容'] = find(tree,'Selector().name("笔记正文").type("XCUIElementTypeOther").enabled(True).visible(True).accessible(False)')['value']
             except:
                 try:
-                    note_info['内容'] = Selector().name("笔记正文").type("XCUIElementTypeOther").enabled(True).visible(True).accessible(False).find().value
+                    note_info['内容'] = find(tree,'Selector().name("笔记正文").type("XCUIElementTypeOther").enabled(True).visible(True).accessible(False)')['value']
                 except:
                     note_info['内容'] = ''
-            interaction_obj_str = 'Selector().label("评论输入框").enabled(True).visible(True).accessible(False).brother().type("XCUIElementTypeOther")'
+            # interaction_obj_str = 'Selector().label("评论输入框").enabled(True).visible(True).accessible(False).brother().type("XCUIElementTypeOther")'
 
             if '评论数' not in note_info:
-                note_info['点赞数'] = run_sel_s(lambda: Selector().label("点赞").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).find(),
-                                                2).value.replace(' ', '').replace('点赞', '')
-                note_info['收藏数'] = Selector().label("收藏").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).find().value.replace(' ', '').replace(
+                note_info['点赞数'] = find(tree,'Selector().label("点赞").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True)')['value'].replace(' ', '').replace('点赞', '')
+                note_info['收藏数'] = find(tree,'Selector().label("收藏").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True)')['value'].replace(' ', '').replace(
                     '收藏', '')
-                note_info['评论数'] = Selector().label("评论").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True).find().value.replace(' ', '').replace(
+                note_info['评论数'] = find(tree,'Selector().label("评论").type("XCUIElementTypeButton").enabled(True).visible(True).accessible(True)')['value'].replace(' ', '').replace(
                     '评论', '')
         # ===============获取作者主页信息================
-        print(note_info)
-        exit()
         t8 = time.time()
         print(f"ag耗时：{t8 - t7}")
         if is_shop:
             # 点击用户名称进入用户主页
             if is_video:
-                Selector(2).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("Button").clickable(
-                    True).click().find()
+                Selector().type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(0).find().click()
             else:
-                Selector(3).id("com.xingin.xhs:id/0_resource_name_obfuscated").type("LinearLayout").clickable(True).click().find()
+                Selector().type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).index(0).find().click()
             note_info = get_user_info(note_info)
             # ===============获取店铺信息================
             if is_shop and note_info['是否有店铺'] == '有':
                 # 进入作者店铺内
-                Selector(2).text("店铺").type("TextView").parent(1).clickable(True).click().find()
+                Selector().name("店铺").label("店铺").value("店铺").type("XCUIElementTypeStaticText").enabled(True).visible(True).accessible(True).find().click()
                 time.sleep(1)
                 note_info = get_shop_info(note_info)
                 # 返回用户信息页
                 print('===========返回用户信息页=====')
-                Selector(2).type("ImageView").click().find()
+                back()
                 time.sleep(0.2)
                 if is_shop_detail_page():
-                    action.Key.back()
+                    back()
                     time.sleep(0.5)
                     if is_shop_detail_page():
-                        action.Key.back()
+                        back()
                         time.sleep(0.5)
             # 返回笔记详情页
             print('===========返回笔记详情页=====')
             time.sleep(0.2)
             # Selector(2).desc("返回").type("ImageView").click().find()
-            action.Key.back()
+            back()
             time.sleep(0.2)
             # print(not is_note_detail_page())
             # if not is_note_detail_page():   # 不是笔记详情页 就再来一次

@@ -10,10 +10,12 @@ from ascript.ios.system import R
 from ascript.ios.node import Selector
 # from ascript.ios.system import Device
 from ascript.ios import system
+import xml.etree.ElementTree as ET
 
-from .common import check_search
+from .common import check_search, get_note_info
 # from .common import check_search, get_note_info, is_note_detail_page
 from ...global_context import GCT
+from ...hoo_xml import find_all, find
 from ....utils.tools import parse_chinese_time, date_to_timestamp, timestamp_to_date, generate_guid, check_end, on, send, \
     out_info, run_sel, off, out_success, getNoteIdByUrl, getUrl, getLinkToNoteUrl, t_sleep, run_sel_s
 
@@ -87,20 +89,23 @@ def on_message_note(ws, option):
     old = 0
     is_end = False # 是否采集完了  要把这个数据推送给客户端
     is_jump = False
-    print('www')
+
     while check_end():
+
+        xml_info = Selector.xml()
+        tree = ET.fromstring(xml_info)
 
         print('www')
         # 获取笔记数据
         notes_obj_str = 'Selector().type("XCUIElementTypeCollectionView").index(1).child().type("XCUIElementTypeCell").visible(True)'
-        notes = eval(notes_obj_str).find_all()
+        notes = find_all(tree,notes_obj_str)
 
         if notes is None:
             print('没有笔记!')
             notes = []
         for idx, note in enumerate(notes, start=1):  # start=1 表示从 1 开始计数
 
-            note_obj_str = notes_obj_str + f".index({i + 2})" + '.child().type("XCUIElementTypeOther").child().type("XCUIElementTypeOther").child()'
+            note_obj_str = notes_obj_str + f".index({idx + 2})" + '.child().type("XCUIElementTypeOther").child().type("XCUIElementTypeOther").child()'
 
             if not check_end():
                 break
@@ -116,32 +121,24 @@ def on_message_note(ws, option):
             if idx > 1:
                 re_time = 0.2
             # 获取笔记标题
-            note_title_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(2).child().type(
-                "XCUIElementTypeStaticText").find()
-            note_title = note_title_obj.value
+            note_title = find(tree,note_obj_str+'.type("XCUIElementTypeOther").index(2).child().type("XCUIElementTypeStaticText")').get('value')
+
             if note_title is None:
                 continue
 
             t2 = time.time()
             print(f"耗时：{t2-t1}")
             # 用户昵称
-            author_name_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(3).child().type(
-                'XCUIElementTypeStaticText').index(1).find()
-            author_name = author_name_obj.value
+            author_name = find(tree,note_obj_str+'.type("XCUIElementTypeOther").index(3).child().type("XCUIElementTypeStaticText").index(1)').get('value')
             if author_name is None:
                 continue
             # 发布时间
-            push_time_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(3).child().type(
-                'XCUIElementTypeStaticText').index(3).find()
-            push_time = push_time_obj.value
+            push_time = find(tree,note_obj_str+'.type("XCUIElementTypeOther").index(3).child().type("XCUIElementTypeStaticText").index(3)').get('value')
             if push_time is None or author_name is None:
                 continue
             push_time = parse_chinese_time(push_time)
             # 点赞数
-            like_num_obj = eval(note_obj_str).type("XCUIElementTypeOther").index(3).child().type(
-                'XCUIElementTypeButton').child().type('XCUIElementTypeStaticText').find()
-            like_num = like_num_obj.value
-            like_num = like_num.replace('赞', '0')
+            like_num = find(tree,note_obj_str+'.type("XCUIElementTypeOther").index(3).child().type("XCUIElementTypeButton").child().type("XCUIElementTypeStaticText")').get('value','').replace('赞', '0')
 
             data_key = hashlib.md5(f"{note_title}{author_name}".encode('utf-8')).hexdigest()
             # print(data_key)
@@ -159,7 +156,6 @@ def on_message_note(ws, option):
                 '发布时间': push_time,
                 '点赞数': like_num,
             }
-
             data_keys.append(data_key)
 
             # """
@@ -233,6 +229,8 @@ def on_message_note(ws, option):
                     is_end = True
             t3 = time.time()
             print(f"b耗时：{t3 - t2}")
+            print(gather_note)
+            exit()
             # 返回
             print('===========返回关键词搜索列表页=====')
             time.sleep(0.2)
@@ -266,33 +264,33 @@ def on_message_note(ws, option):
         GCT().set('all_note', all_note)
         # 往下滑动
         print('======滑动======')
-        # 滑动
-        display = Device.display()
-        width = display.widthPixels
-        height = display.heightPixels
-
-        # 从屏幕中间向下滑动（向下滚动页面）
-        # 注意：向下滑动，终点y比起点y大
-        action.slide(
-            x=width // 2,
-            y=int(height * 0.8),  # 从屏幕下方开始
-            x1=width // 2,
-            y1=int(height * 0.2),  # 到屏幕上方
-            dur=500  # 持续时间 ms
-        )
-
-        time.sleep(0.5)
-        # exit()
-
-        if g_num >= 6:
-            print(f'结束--{g_num}')
-            break
-        if len(gather_note) > old:
-            g_num = 0
-        else:
-            g_num += 1
-
-        old = len(gather_note)
+        # # 滑动
+        # display = Device.display()
+        # width = display.widthPixels
+        # height = display.heightPixels
+        #
+        # # 从屏幕中间向下滑动（向下滚动页面）
+        # # 注意：向下滑动，终点y比起点y大
+        # action.slide(
+        #     x=width // 2,
+        #     y=int(height * 0.8),  # 从屏幕下方开始
+        #     x1=width // 2,
+        #     y1=int(height * 0.2),  # 到屏幕上方
+        #     dur=500  # 持续时间 ms
+        # )
+        #
+        # time.sleep(0.5)
+        # # exit()
+        #
+        # if g_num >= 6:
+        #     print(f'结束--{g_num}')
+        #     break
+        # if len(gather_note) > old:
+        #     g_num = 0
+        # else:
+        #     g_num += 1
+        #
+        # old = len(gather_note)
 
     send(ws, 'func_phone_xhs_note_data', {
         'data': gather_note,
