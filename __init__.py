@@ -1,8 +1,8 @@
 import sys
 from .test.test import test_run
 
-test_run()
-exit()
+# test_run()
+# exit()
 
 from .service.global_context import GCT
 
