@@ -1,6 +1,5 @@
 import sys
-from .test.test import test_run
-
+# from .test.test import test_run
 # test_run()
 # exit()
 
@@ -12,9 +11,7 @@ GCT.reset_instance()
 print(GCT().keys())
 print('已经清空')
 
-
-
-if sys.platform == "android":
+if sys.platform == "linux":
     from .controllers.android import form
     form.run()
 elif sys.platform == "ios":

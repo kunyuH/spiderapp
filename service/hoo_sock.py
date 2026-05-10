@@ -6,9 +6,9 @@ import time
 import traceback
 
 # 添加 lib 目录到 Python 路径（使用内置的 websocket-client）
-_lib_path = os.path.join(os.path.dirname(__file__), '..', 'lib', 'websocket-client-master')
-sys.path.insert(0, _lib_path)
-
+# _lib_path = os.path.join(os.path.dirname(__file__), '..', 'lib', 'websocket-client-master')
+# sys.path.insert(0, _lib_path)
+#
 from websocket import WebSocketApp
 
 from ..utils.ui_helper import UIHelper

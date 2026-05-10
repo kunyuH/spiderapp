@@ -139,19 +139,25 @@ def on_message_content(ws, option):
     content_button = run_sel_s(lambda :Selector(2).type("Button").clickable(True).desc("评论.*").find(),6)
     # true 能拿到评论按钮
     if content_button:
+        print("======已经拿到评论按钮=======")
         # 去除所有空格
         content_num = content_button.desc.replace(" ", "").replace("评论", "")
         time.sleep(0.5)
         # true 没有评论
         if content_num == '' or content_num == '0' or content_num == 0:
+            print("======没有评论=======")
             out_info(ws, f"笔记 【{note_id}】 没有评论")
             send(ws, 'func_phone_xhs_content_data', gather_comment)
             return
         else:
+            print(f"======有评论=={content_num}=====")
             # 点击评论
-            content_button.find(Selector(2).click())
+            content_button_rect = content_button.rect
+            action.Touch.down(content_button_rect.centerX(), content_button_rect.centerY())
+            action.Touch.up(content_button_rect.centerX(), content_button_rect.centerY())
     # 拿不到评论按钮 则换一种方式拿
     else:
+        print("======没拿到评论按钮=======")
         # 获取评论点击对象
         content_button = run_sel_s(lambda :Selector(2).path("/FrameLayout/FrameLayout/LinearLayout").clickable(True).drawingOrder(3).find())
         if content_button:

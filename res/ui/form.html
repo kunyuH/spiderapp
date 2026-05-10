@@ -69,12 +69,12 @@
           }
           return result;
         }
-        let platform = 'android'
+        let platform = 'linux'
         let ascript_obj = null
 
         function init_platform(p){
             platform = p
-            if(platform == 'android'){
+            if(platform == 'linux'){
                 ascript_obj = airscript
             }else if(platform == 'ios'){
                 ascript_obj = ascript
@@ -176,7 +176,7 @@
 
                 // 提交事件
                 form.on('submit(demo2)', function (data) {
-                    // layer.alert('asdasd');
+                    layer.alert('asdasd');
                     var field = data.field; // 获取表单字段值
                     var data = JSON.stringify(field)
 
