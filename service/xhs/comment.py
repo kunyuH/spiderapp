@@ -310,7 +310,8 @@ def on_message_content(ws, option):
                         time.sleep(0.5)
                         # 获取用户主页信息
                         # 用户小红书号
-                        red_id = run_sel_s(lambda: Selector(2).text("小红书号.*").find(),4).text.replace('小红书号：', '').strip()
+                        red_id_obj = run_sel_s(lambda: Selector(2).text("小红书号.*").find(),4)
+                        red_id = red_id_obj.text.replace('小红书号：', '').strip() if red_id_obj else f'无-{generate_guid()}'
                         # 用户性别
                         gen = run_sel(lambda: Selector().path("/FrameLayout/ViewGroup/LinearLayout/LinearLayout/LinearLayout/LinearLayout").find(),3,0)
                         gender = gen.desc if gen is not None else ''
