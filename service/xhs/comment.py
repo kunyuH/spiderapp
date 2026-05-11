@@ -133,6 +133,7 @@ def on_message_content(ws, option):
 
     gather_comment = []
 
+    time.sleep(1)
     # 获取笔记评论量
     # 有评论  则 点击评论  点击按最新
     # 获取评论点击对象
@@ -175,22 +176,14 @@ def on_message_content(ws, option):
         else:
             send(ws, 'func_phone_xhs_content_data', gather_comment)
             return
-    # send(ws, 'func_phone_xhs_content_data', gather_comment)
-    # #
-    # # display = Device.display()
-    # # # 屏幕宽度
-    # # print(display.widthPixels)
-    # # # 屏幕高度
-    # # print(display.heightPixels)
-    #
-    # return
+
     out_info(ws, f"笔记 【{note_id}】 评论量：{content_num}")
-    time.sleep(0.5)
+    time.sleep(1)
 
     # 点击按最新
-    run_sel(lambda :Selector(2).text(".*条评论").type("TextView").click().find(),3)
-    run_sel(lambda: Selector(2).text("最新").type("TextView").parent(1).click().find(),2)
-    time.sleep(0.5)
+    run_sel_s(lambda :Selector(2).text(".*条评论").type("TextView").click().find(),5)
+    run_sel_s(lambda: Selector(2).text("最新").type("TextView").parent(1).click().find(),5)
+    time.sleep(1)
 
     is_jump = False
     num = 0
